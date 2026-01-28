@@ -57,6 +57,14 @@ const formatTimerMs = (ms: number): string => {
     return `${h}h${m}m${s}s`;
 };
 
+const formatDurationMsFull = (ms: number): string => {
+    const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+    const h = Math.floor(totalSeconds / 3600);
+    const m = Math.floor((totalSeconds % 3600) / 60);
+    const s = totalSeconds % 60;
+    return `${h}h${m}m${s}s`;
+};
+
 /**
  * Calculates working minutes for a single session.
  */
@@ -655,7 +663,7 @@ export default function WorkTimer() {
         // We'll trust the UI to handle the display logic (showing -- or negative).
         const displayTodayBalance = realTodayBalance;
 
-        const breakMs = sessions.reduce((acc, s) => acc + s.breaks.reduce((ba, b) => ba + ((b.end || (s.end ? s.end : now)) - b.start), 0), 0)
+        const breakMsTotal = sessions.reduce((acc, s) => acc + s.breaks.reduce((ba, b) => ba + ((b.end || (s.end ? s.end : now)) - b.start), 0), 0)
             + (isActive ? session!.breaks.reduce((ba, b) => ba + ((b.end || now) - b.start), 0) : 0);
 
         const workPct = requiredToday > 0 ? (workedToday / requiredToday) * 100 : 0;
@@ -665,7 +673,8 @@ export default function WorkTimer() {
             requiredToday,
             realTodayBalance,
             displayTodayBalance,
-            breakMin: Math.floor(breakMs / 60000),
+            breakMsTotal,
+            breakMin: Math.floor(breakMsTotal / 60000),
             isClosed,
             hasActivity,
             isHoliday: isDateHoliday(todayDateKey),
@@ -677,8 +686,8 @@ export default function WorkTimer() {
     const historicalCalculations = useMemo(() => {
         // CarryOverBeforeToday = sum(dailyBalance for all days before today)
         const otherDays = Array.from(new Set([
-            ...allHistoricalSessions.filter(s => s.date !== todayDateKey).map(s => s.date),
-            ...closedDays.filter(d => d !== todayDateKey)
+            ...allHistoricalSessions.filter(s => s.date < todayDateKey).map(s => s.date),
+            ...closedDays.filter(d => d < todayDateKey)
         ])).sort();
 
         let carryOverMin = 0;
@@ -913,15 +922,22 @@ export default function WorkTimer() {
     // --- View Sort ---
 
     const sortedGroups = useMemo(() => {
-        const grouped: Record<string, Session[]> = {};
+        const grouped: Record<string, any[]> = {};
         allHistoricalSessions.filter(s => s.date.startsWith(selectedMonth)).forEach(s => {
             if (!grouped[s.date]) grouped[s.date] = [];
-            grouped[s.date].push(s);
+            // Add Session
+            grouped[s.date].push({ ...s, entryType: 'session' });
+            // Add Breaks as independent events if requested, or we can just render them differently
+            // Actually, let's just make sure the renderer handles them.
         });
-        return Object.keys(grouped).sort().reverse().map(date => ({
-            date,
-            sessions: grouped[date].sort((a, b) => b.start - a.start)
-        }));
+
+        const sortedDays = Object.keys(grouped).sort().reverse().map(date => {
+            // We want a list of items (sessions and their internal breaks)
+            const sessionsForDay = grouped[date].sort((a, b) => b.start - a.start);
+            return { date, sessions: sessionsForDay };
+        });
+
+        return sortedDays;
     }, [allHistoricalSessions, selectedMonth]);
 
     const activeBreak = session?.breaks.find(b => b.end === null);
@@ -1315,8 +1331,8 @@ export default function WorkTimer() {
                                 </div>
                                 <div className={styles.statCard}>
                                     <span className={styles.statLabel}>Total Break</span>
-                                    <span className={styles.statValue} style={{ color: 'var(--warning-text)' }}>
-                                        {minutesToHHMM(todayCalculations.breakMin).slice(1)}
+                                    <span className={styles.statValue} style={{ color: 'var(--warning-text)', fontSize: '1.1rem' }}>
+                                        {formatDurationMsFull(todayCalculations.breakMsTotal)}
                                     </span>
                                 </div>
                                 <div className={styles.statCard}>
@@ -1325,9 +1341,10 @@ export default function WorkTimer() {
                                         {(() => {
                                             if (todayCalculations.requiredToday === 0) return 'Holiday';
                                             if (!session) return '--:--';
-                                            const reqMs = todayCalculations.requiredToday * 60000;
+                                            // Adjusted Goal = requiredToday - historicalCalculations.carryOverMin
+                                            const adjGoalMs = (todayCalculations.requiredToday - historicalCalculations.carryOverMin) * 60000;
                                             const workedMs = todayCalculations.workedToday * 60000;
-                                            const remaining = reqMs - workedMs;
+                                            const remaining = adjGoalMs - workedMs;
                                             if (remaining <= 0) return 'Now';
                                             const estimatedEnd = new Date(now + remaining);
                                             const h = String(estimatedEnd.getHours()).padStart(2, '0');
@@ -1336,10 +1353,18 @@ export default function WorkTimer() {
                                         })()}
                                     </span>
                                 </div>
-                                <div className={styles.statCard}>
-                                    <span className={styles.statLabel}>Daily Goal</span>
-                                    <span className={styles.statValue}>
-                                        {Math.floor(todayCalculations.requiredToday / 60)}h{String(todayCalculations.requiredToday % 60).padStart(2, '0')}m
+                                <div className={styles.statCard} style={{ border: '1px solid var(--primary-low)' }}>
+                                    <span className={styles.statLabel}>Target Goal (Adj)</span>
+                                    <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
+                                        {(() => {
+                                            const adj = todayCalculations.requiredToday - historicalCalculations.carryOverMin;
+                                            return `${Math.floor(adj / 60)}h${String(Math.abs(adj % 60)).padStart(2, '0')}m`;
+                                        })()}
+                                    </span>
+                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem', textAlign: 'center' }}>
+                                        {historicalCalculations.carryOverMin >= 0 ?
+                                            `Saved: ${minutesToHHMM(historicalCalculations.carryOverMin).slice(1)}` :
+                                            `Debt: ${minutesToHHMM(historicalCalculations.carryOverMin).slice(1)}`}
                                     </span>
                                 </div>
                             </div>
@@ -1417,33 +1442,46 @@ export default function WorkTimer() {
                             {sortedGroups.map(group => (
                                 <div key={group.date} className={styles.dateGroup}>
                                     <div className={styles.dateHeader}>
-                                        {new Date(group.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
+                                        <span style={{ opacity: 0.6 }}>📅</span> {new Date(group.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
                                     </div>
-                                    <div>
-                                        {group.sessions.map(s => (
-                                            <div key={s.id} className={styles.entryItem}>
-                                                <div>
-                                                    <div className={styles.entryTime}>
-                                                        {msToHHMM(s.start)} - {s.end ? msToHHMM(s.end) : <span style={{ color: 'var(--primary)' }}>Active</span>}
+                                    <div className={styles.entriesTimeline}>
+                                        {group.sessions.map((s: Session) => (
+                                            <React.Fragment key={s.id}>
+                                                <div className={styles.entryItem}>
+                                                    <div className={styles.entryIndicator} style={{ background: 'var(--primary)' }}></div>
+                                                    <div style={{ flex: 1 }}>
+                                                        <div className={styles.entryTime}>
+                                                            {msToHHMM(s.start)} - {s.end ? msToHHMM(s.end) : <span style={{ color: 'var(--primary)', animation: 'pulse 2s infinite' }}>Tracking...</span>}
+                                                            <span className={styles.entryTypeTag}>SESSION</span>
+                                                        </div>
+                                                        <div className={styles.entryMeta}>
+                                                            <span>{minutesToHHMM(entryWorkedMinutes(s, s.end || now)).slice(1)} worked</span>
+                                                        </div>
                                                     </div>
-                                                    <div className={styles.entryMeta}>
-                                                        <span>{minutesToHHMM(entryWorkedMinutes(s, s.end || now)).slice(1)} worked</span>
-                                                        {s.breaks.length > 0 && (
-                                                            <div className={styles.breaksListMini}>
-                                                                {s.breaks.map(b => (
-                                                                    <span key={b.id} className={styles.breakTag}>
-                                                                        {b.type === 'lunch' ? '🍱' : '☕'} {msToHHMM(b.start)}-{b.end ? msToHHMM(b.end) : '?'}
-                                                                    </span>
-                                                                ))}
+                                                    <div className={styles.entryActions}>
+                                                        <button className={styles.btnIcon} onClick={() => openEdit(s)}>✏️</button>
+                                                        <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => deleteSession(s.id)}>🗑️</button>
+                                                    </div>
+                                                </div>
+
+                                                {/* Independent Break Tracks */}
+                                                {s.breaks.map((b: Break) => (
+                                                    <div key={b.id} className={`${styles.entryItem} ${styles.entryBreakLarge}`}>
+                                                        <div className={styles.entryIndicator} style={{ background: 'var(--warning)' }}></div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div className={styles.entryTime} style={{ color: 'var(--warning-text)' }}>
+                                                                {msToHHMM(b.start)} - {b.end ? msToHHMM(b.end) : 'Running...'}
+                                                                <span className={styles.entryTypeTag} style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
+                                                                    {b.type.toUpperCase()}
+                                                                </span>
                                                             </div>
-                                                        )}
+                                                            <div className={styles.entryMeta}>
+                                                                <span>{Math.floor(((b.end || now) - b.start) / 60000)}m break duration</span>
+                                                            </div>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                                <div className={styles.entryActions}>
-                                                    <button className={styles.btnIcon} onClick={() => openEdit(s)}>✏️</button>
-                                                    <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => deleteSession(s.id)}>🗑️</button>
-                                                </div>
-                                            </div>
+                                                ))}
+                                            </React.Fragment>
                                         ))}
                                     </div>
                                 </div>

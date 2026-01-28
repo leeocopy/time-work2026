@@ -439,49 +439,92 @@
 }
 
 .entryItem {
-    padding: 0.75rem 1rem;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    padding: 0.75rem 0.5rem;
     display: flex;
-    justify-content: space-between;
+    gap: 1rem;
     align-items: center;
+    position: relative;
+    border-radius: 8px;
+    transition: background 0.2s;
 }
 
-.entryItem:last-child {
-    border-bottom: none;
+.entryItem:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.entriesTimeline {
+    position: relative;
+    padding-left: 0.5rem;
+}
+
+.entriesTimeline::before {
+    content: '';
+    position: absolute;
+    left: 17px;
+    top: 5px;
+    bottom: 5px;
+    width: 2px;
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.entryIndicator {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    position: relative;
+    z-index: 1;
+    border: 2px solid var(--background);
 }
 
 .entryTime {
-    font-size: 0.9rem;
+    font-size: 0.95rem;
     font-weight: 700;
     color: var(--foreground);
-    font-family: 'Titan One', cursive;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.entryTypeTag {
+    font-size: 0.6rem;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    color: var(--text-muted);
+    font-family: var(--font-mono);
+}
+
+.entryBreakLarge {
+    margin-left: 1rem;
+    opacity: 0.9;
+    padding: 0.5rem 0.5rem;
+    border-left: 2px dashed rgba(255, 255, 255, 0.05);
+    margin-top: -0.25rem;
+    margin-bottom: 0.25rem;
+}
+
+.entryBreakLarge .entryIndicator {
+    width: 8px;
+    height: 8px;
 }
 
 .entryMeta {
     font-size: 0.75rem;
     color: var(--text-muted);
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
 }
 
-.breaksListMini {
-    margin-top: 0.25rem;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.4rem;
-}
+@keyframes pulse {
+    0% {
+        opacity: 1;
+    }
 
-.breakTag {
-    font-size: 0.65rem;
-    background: rgba(255, 255, 255, 0.03);
-    padding: 0.1rem 0.4rem;
-    border-radius: 4px;
-    color: var(--text-muted);
-    border: 1px solid rgba(255, 255, 255, 0.05);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.2rem;
+    50% {
+        opacity: 0.5;
+    }
+
+    100% {
+        opacity: 1;
+    }
 }
 
 .entryActions {
