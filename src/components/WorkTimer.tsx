@@ -61,20 +61,28 @@ const formatTimerMs = (ms: number): string => {
  * Calculates working minutes for a single session.
  */
 const entryWorkedMinutes = (s: Session, currentTime: number): number => {
+    if (!s.start) return 0;
     const start = s.start;
+    // For active sessions, we MUST have a currentTime. If 0 is passed, we can't calculate.
     let end = s.end || currentTime;
 
-    // Handle midnight crossing for logical timestamps
-    if (end < start) {
+    if (!s.end && !currentTime) return 0;
+
+    // Handle potential data issues where end < start
+    if (end < start && (end !== 0)) {
         end += 24 * 60 * 60 * 1000;
     }
 
-    const totalDurationMs = end - start;
+    const totalDurationMs = Math.max(0, end - start);
     const totalBreakMs = s.breaks.reduce((acc, b) => {
         const bStart = b.start;
+        // If break is ongoing, use parent end timer or currentTime
         let bEnd = b.end || (s.end ? s.end : currentTime);
-        if (bEnd < bStart) bEnd += 24 * 60 * 60 * 1000;
-        return acc + (bEnd - bStart);
+
+        if (!bEnd) return acc;
+        if (bEnd < bStart && bEnd !== 0) bEnd += 24 * 60 * 60 * 1000;
+
+        return acc + Math.max(0, bEnd - bStart);
     }, 0);
 
     return Math.max(0, Math.floor((totalDurationMs - totalBreakMs) / 60000));
@@ -182,7 +190,11 @@ const generateId = () => {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
-    return Math.random().toString(36).substring(2, 9);
+    // Simple UUID v4-ish fallback for non-secure contexts
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
 };
 
 export default function WorkTimer() {
@@ -489,10 +501,17 @@ export default function WorkTimer() {
         };
 
         // Sync to Supabase
-        if (user) {
+        let currentUser = user;
+        if (!currentUser) {
+            const { data } = await supabase.auth.getSession();
+            currentUser = data.session?.user || null;
+            if (currentUser) setUser(currentUser);
+        }
+
+        if (currentUser) {
             const { error } = await supabase.from('sessions').insert({
                 id: newSession.id,
-                user_id: user.id,
+                user_id: currentUser.id,
                 work_date: todayDateKey,
                 start_time: new Date(startTime).toISOString()
             });
@@ -501,6 +520,7 @@ export default function WorkTimer() {
 
         setSession(newSession);
         setState('WORKING');
+        await loadData();
     };
 
     const toggleBreak = async (type: BreakType) => {
@@ -511,7 +531,14 @@ export default function WorkTimer() {
             const newBreak: Break = { id: generateId(), start: nowMs, end: null, type };
 
             // Sync to Supabase
-            if (user) {
+            let currentUser = user;
+            if (!currentUser) {
+                const { data } = await supabase.auth.getSession();
+                currentUser = data.session?.user || null;
+                if (currentUser) setUser(currentUser);
+            }
+
+            if (currentUser) {
                 const { error } = await supabase.from('breaks').insert({
                     id: newBreak.id,
                     session_id: session.id,
@@ -523,13 +550,20 @@ export default function WorkTimer() {
 
             setSession({ ...session, breaks: [...session.breaks, newBreak] });
             setState('ON_BREAK');
+            await loadData();
         } else if (state === 'ON_BREAK') {
             const activeBreak = session.breaks.find(b => b.end === null);
             if (activeBreak?.type === type) {
                 const updatedBreaks = session.breaks.map(b => b.end === null ? { ...b, end: nowMs } : b);
 
                 // Sync to Supabase
-                if (user && activeBreak) {
+                let currentUser = user;
+                if (!currentUser) {
+                    const { data } = await supabase.auth.getSession();
+                    currentUser = data.session?.user || null;
+                }
+
+                if (currentUser && activeBreak) {
                     const { error } = await supabase.from('breaks')
                         .update({ end_time: new Date(nowMs).toISOString() })
                         .eq('id', activeBreak.id);
@@ -538,6 +572,7 @@ export default function WorkTimer() {
 
                 setSession({ ...session, breaks: updatedBreaks });
                 setState('WORKING');
+                await loadData();
             }
         }
     };
@@ -547,15 +582,22 @@ export default function WorkTimer() {
         const nowMs = Date.now();
         let sessionToSave = { ...session };
 
+        // Sync to Supabase
+        let currentUser = user;
+        if (!currentUser) {
+            const { data } = await supabase.auth.getSession();
+            currentUser = data.session?.user || null;
+            if (currentUser) setUser(currentUser);
+        }
+
         if (state === 'ON_BREAK') {
             const activeBreak = sessionToSave.breaks.find(b => b.end === null);
-            if (activeBreak && user) {
+            if (activeBreak && currentUser) {
                 await supabase.from('breaks').update({ end_time: new Date(nowMs).toISOString() }).eq('id', activeBreak.id);
             }
         }
 
-        // Sync to Supabase
-        if (user) {
+        if (currentUser) {
             const { error } = await supabase.from('sessions')
                 .update({ end_time: new Date(nowMs).toISOString() })
                 .eq('id', session.id);
@@ -591,7 +633,8 @@ export default function WorkTimer() {
     // --- Statistics & Calculations ---
 
     const todayCalculations = useMemo(() => {
-        const sessions = allHistoricalSessions.filter(s => s.date === todayDateKey);
+        // Exclude the active state session from history to avoid double counting
+        const sessions = allHistoricalSessions.filter(s => s.date === todayDateKey && s.id !== session?.id);
         const isActive = session && session.date === todayDateKey;
         const workedToday = dailyWorkedMinutes(sessions, isActive ? now : 0) + (isActive ? entryWorkedMinutes(session!, now) : 0);
         const requiredToday = getRequiredMinutesForDate(todayDateKey, isDateHoliday(todayDateKey));
@@ -847,10 +890,10 @@ export default function WorkTimer() {
         let totalBreakWeek = 0;
 
         const dailyStats = weekDays.map(dateStr => {
-            const sessions = allHistoricalSessions.filter(s => s.date === dateStr);
             const isToday = dateStr === todayDateKey;
+            // Exclude active session from history filter to avoid double counting
+            const sessions = allHistoricalSessions.filter(s => s.date === dateStr && s.id !== session?.id);
 
-            // If today, include active session
             let dayWorked = dailyWorkedMinutes(sessions, isToday ? now : 0);
             if (isToday && session) dayWorked += entryWorkedMinutes(session, now);
 
@@ -1077,12 +1120,13 @@ export default function WorkTimer() {
                                                         });
                                                         if (!sErr) {
                                                             await supabase.from('breaks').insert({
+                                                                id: generateId(),
                                                                 session_id: sessionId, break_type: 'lunch',
                                                                 start_time: lunchS.toISOString(), end_time: lunchE.toISOString()
                                                             });
                                                         }
                                                     }
-                                                    loadData();
+                                                    await loadData();
                                                 }}
                                             >
                                                 📋 Log 08-17
