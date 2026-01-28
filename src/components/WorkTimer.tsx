@@ -389,6 +389,8 @@ export default function WorkTimer() {
         const { data: { session: authSession } } = await supabase.auth.getSession();
 
         let history: Session[] = [];
+        let activeSess: Session | null = null;
+        let currentState: TimerState = 'IDLE';
 
         if (authSession) {
             setUser(authSession.user);
@@ -415,10 +417,17 @@ export default function WorkTimer() {
                         type: rb.break_type
                     }))
                 }));
+
+                // Auto-detect active session (NULL end_time)
+                const remoteActive = history.find(s => s.end === null);
+                if (remoteActive) {
+                    activeSess = remoteActive;
+                    currentState = remoteActive.breaks.some(b => b.end === null) ? 'ON_BREAK' : 'WORKING';
+                }
             }
         }
 
-        // Fallback or Merge with localStorage (optional)
+        // Migration/Backup
         if (history.length === 0) {
             const keys = Object.keys(localStorage).filter(k => k.startsWith('workTimer_sessions_'));
             keys.forEach(k => {
@@ -427,23 +436,13 @@ export default function WorkTimer() {
         }
 
         setAllHistoricalSessions(history);
-
-        const savedState = localStorage.getItem('workTimer_state');
-        if (savedState) setState(savedState as TimerState);
-
-        const savedActiveSession = localStorage.getItem('workTimer_activeSession');
-        if (savedActiveSession) {
-            setSession(safeJSONParse<Session | null>(savedActiveSession, null));
-        }
+        setSession(activeSess);
+        setState(currentState);
 
         const savedClosedDays = localStorage.getItem('workTimer_closedDays');
-        if (savedClosedDays) {
-            setClosedDays(safeJSONParse<string[]>(savedClosedDays, []));
-        }
-
+        if (savedClosedDays) setClosedDays(safeJSONParse<string[]>(savedClosedDays, []));
         const savedCustomHolidays = localStorage.getItem('workTimer_customHolidays');
         if (savedCustomHolidays) setCustomHolidays(safeJSONParse<Holiday[]>(savedCustomHolidays, []));
-
         const savedDisabledHolidays = localStorage.getItem('workTimer_disabledHolidays');
         if (savedDisabledHolidays) setDisabledHolidays(safeJSONParse<string[]>(savedDisabledHolidays, []));
     };
@@ -453,18 +452,14 @@ export default function WorkTimer() {
     }, []);
 
     useEffect(() => {
-        const key = `workTimer_sessions_${selectedMonth}`;
-        setCompletedSessions(safeJSONParse<Session[]>(localStorage.getItem(key), []));
-    }, [selectedMonth, allHistoricalSessions.length]); // Reload when history changes to keep Browsed Month view in sync
+        const filtered = allHistoricalSessions.filter(s => s.date.startsWith(selectedMonth) && s.end !== null);
+        setCompletedSessions(filtered);
+    }, [selectedMonth, allHistoricalSessions]);
 
+    // Simplified effect for metadata
     useEffect(() => {
-        localStorage.setItem('workTimer_state', state);
-    }, [state]);
-
-    useEffect(() => {
-        if (session) localStorage.setItem('workTimer_activeSession', JSON.stringify(session));
-        else localStorage.removeItem('workTimer_activeSession');
-    }, [session]);
+        // No local storage sync for state/session anymore
+    }, [state, session]);
 
     useEffect(() => {
         localStorage.setItem('workTimer_closedDays', JSON.stringify(closedDays));
@@ -480,11 +475,11 @@ export default function WorkTimer() {
 
     // --- Handlers ---
 
-    const handleCheckIn = async () => {
+    const handleCheckIn = async (forcedStartTime?: number) => {
         const currentMonth = getLocalMonthKey();
         if (selectedMonth !== currentMonth) setSelectedMonth(currentMonth);
 
-        const startTime = Date.now();
+        const startTime = forcedStartTime || Date.now();
         const newSession: Session = {
             id: generateId(),
             date: todayDateKey,
@@ -495,12 +490,12 @@ export default function WorkTimer() {
 
         // Sync to Supabase
         if (user) {
-            const { data, error } = await supabase.from('sessions').insert({
+            const { error } = await supabase.from('sessions').insert({
                 id: newSession.id,
                 user_id: user.id,
                 work_date: todayDateKey,
                 start_time: new Date(startTime).toISOString()
-            }).select();
+            });
             if (error) console.error("Error syncing check-in:", error);
         }
 
@@ -557,10 +552,7 @@ export default function WorkTimer() {
             if (activeBreak && user) {
                 await supabase.from('breaks').update({ end_time: new Date(nowMs).toISOString() }).eq('id', activeBreak.id);
             }
-            sessionToSave.breaks = sessionToSave.breaks.map(b => b.end === null ? { ...b, end: nowMs } : b);
         }
-
-        sessionToSave.end = nowMs;
 
         // Sync to Supabase
         if (user) {
@@ -570,9 +562,10 @@ export default function WorkTimer() {
             if (error) console.error("Error syncing check-out:", error);
         }
 
-        saveSessionToStorage(sessionToSave);
+        // Final UI Reset and Refresh
         setSession(null);
         setState('IDLE');
+        await loadData();
     };
 
     const handleEndOfDay = () => {
@@ -581,33 +574,18 @@ export default function WorkTimer() {
         setClosedDays(prev => prev.includes(todayDateKey) ? prev : [...prev, todayDateKey]);
     };
 
-    const saveSessionToStorage = (s: Session) => {
-        const month = s.date.slice(0, 7);
-        const key = `workTimer_sessions_${month}`;
-        const stored = safeJSONParse<Session[]>(localStorage.getItem(key), []);
-        const existsIndex = stored.findIndex(item => item.id === s.id);
-        const updatedList = existsIndex > -1 ? stored.map(item => item.id === s.id ? s : item) : [...stored, s];
 
-        localStorage.setItem(key, JSON.stringify(updatedList));
+    const deleteSession = async (sessionId: string) => {
+        if (!confirm('Are you sure you want to delete this session?')) return;
 
-        // Refresh full history state
-        const allKeys = Object.keys(localStorage).filter(k => k.startsWith('workTimer_sessions_'));
-        let history: Session[] = [];
-        allKeys.forEach(k => {
-            history = history.concat(safeJSONParse<Session[]>(localStorage.getItem(k), []));
-        });
-        setAllHistoricalSessions(history);
-    };
-
-    const deleteSession = (sessionId: string, date: string) => {
-        const month = date.slice(0, 7);
-        const key = `workTimer_sessions_${month}`;
-        const stored = safeJSONParse<Session[]>(localStorage.getItem(key), []);
-        const updatedList = stored.filter(s => s.id !== sessionId);
-        localStorage.setItem(key, JSON.stringify(updatedList));
-
-        // Refresh history
-        setAllHistoricalSessions(prev => prev.filter(s => s.id !== sessionId));
+        if (user) {
+            const { error } = await supabase.from('sessions').delete().eq('id', sessionId);
+            if (error) {
+                console.error("Error deleting session:", error);
+                return;
+            }
+        }
+        await loadData();
     };
 
     // --- Statistics & Calculations ---
@@ -738,7 +716,7 @@ export default function WorkTimer() {
 
     // --- Modal Handlers ---
 
-    const handleSaveManual = () => {
+    const handleSaveManual = async () => {
         const startMs = timeToMs(formData.start, formData.date);
         let endMs = timeToMs(formData.end, formData.date);
         if (endMs < startMs) endMs += 24 * 60 * 60 * 1000;
@@ -759,9 +737,42 @@ export default function WorkTimer() {
 
         if (editingId) {
             const old = allHistoricalSessions.find(s => s.id === editingId);
-            if (old && old.date !== newSession.date) deleteSession(old.id, old.date);
+            if (old && old.date !== newSession.date) {
+                // If date changed, we need to ensure we don't have duplicates or mismatched date-keys
+                // But the ID is the same, so Supabase will just update it. 
+                // However, deleteSession has a confirmation, so let's just let the upsert handle it.
+            }
         }
-        saveSessionToStorage(newSession);
+
+        // Sync to Supabase
+        if (user) {
+            // Upsert Session
+            const { error: sErr } = await supabase.from('sessions').upsert({
+                id: newSession.id,
+                user_id: user.id,
+                work_date: newSession.date,
+                start_time: new Date(newSession.start).toISOString(),
+                end_time: new Date(newSession.end!).toISOString()
+            });
+
+            if (!sErr) {
+                // Delete existing breaks for this session and re-insert
+                await supabase.from('breaks').delete().eq('session_id', newSession.id);
+                if (newSession.breaks.length > 0) {
+                    await supabase.from('breaks').insert(
+                        newSession.breaks.map(b => ({
+                            id: b.id,
+                            session_id: newSession.id,
+                            break_type: b.type,
+                            start_time: new Date(b.start).toISOString(),
+                            end_time: new Date(b.end!).toISOString()
+                        }))
+                    );
+                }
+            }
+        }
+
+        await loadData();
         setManualFormOpen(false);
     };
 
@@ -1032,9 +1043,52 @@ export default function WorkTimer() {
 
                             <div className={styles.controls}>
                                 {state === 'IDLE' ? (
-                                    <button className={`${styles.button} ${styles.btnPrimary}`} onClick={handleCheckIn}>
-                                        System Check-In
-                                    </button>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', width: '100%' }}>
+                                        <button className={`${styles.button} ${styles.btnPrimary}`} onClick={() => handleCheckIn()}>
+                                            System Check-In
+                                        </button>
+                                        <div className={styles.controlGrid}>
+                                            <button
+                                                className={`${styles.button} ${styles.btnSecondary}`}
+                                                style={{ fontSize: '0.75rem', padding: '0.6rem' }}
+                                                onClick={() => {
+                                                    const d = new Date();
+                                                    d.setHours(8, 0, 0, 0);
+                                                    handleCheckIn(d.getTime());
+                                                }}
+                                            >
+                                                🚀 08:00 Start
+                                            </button>
+                                            <button
+                                                className={`${styles.button} ${styles.btnSecondary}`}
+                                                style={{ fontSize: '0.75rem', padding: '0.6rem' }}
+                                                onClick={async () => {
+                                                    const d = new Date();
+                                                    const start = new Date(d); start.setHours(8, 0, 0, 0);
+                                                    const end = new Date(d); end.setHours(17, 0, 0, 0);
+                                                    const lunchS = new Date(d); lunchS.setHours(12, 0, 0, 0);
+                                                    const lunchE = new Date(d); lunchE.setHours(13, 0, 0, 0);
+
+                                                    const sessionId = generateId();
+                                                    if (user) {
+                                                        const { error: sErr } = await supabase.from('sessions').insert({
+                                                            id: sessionId, user_id: user.id, work_date: todayDateKey,
+                                                            start_time: start.toISOString(), end_time: end.toISOString()
+                                                        });
+                                                        if (!sErr) {
+                                                            await supabase.from('breaks').insert({
+                                                                session_id: sessionId, break_type: 'lunch',
+                                                                start_time: lunchS.toISOString(), end_time: lunchE.toISOString()
+                                                            });
+                                                        }
+                                                    }
+                                                    loadData();
+                                                }}
+                                            >
+                                                📋 Log 08-17
+                                            </button>
+                                        </div>
+                                    </div>
                                 ) : (
                                     <>
                                         <button className={`${styles.button} ${styles.btnPrimary}`} onClick={handleCheckOut} style={{ marginBottom: '0.25rem' }}>
@@ -1274,7 +1328,7 @@ export default function WorkTimer() {
                                                 </div>
                                                 <div className={styles.entryActions}>
                                                     <button className={styles.btnIcon} onClick={() => openEdit(s)}>✏️</button>
-                                                    <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => deleteSession(s.id, s.date)}>🗑️</button>
+                                                    <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => deleteSession(s.id)}>🗑️</button>
                                                 </div>
                                             </div>
                                         ))}
