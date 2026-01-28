@@ -386,11 +386,47 @@ export default function WorkTimer() {
     }, []);
 
     const loadData = async () => {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-            setUser(session.user);
-            // We will fetch from Supabase here later
+        const { data: { session: authSession } } = await supabase.auth.getSession();
+
+        let history: Session[] = [];
+
+        if (authSession) {
+            setUser(authSession.user);
+
+            // Fetch from Supabase
+            const { data: remoteSessions, error: sessError } = await supabase
+                .from('sessions')
+                .select(`
+                    *,
+                    breaks (*)
+                `)
+                .order('start_time', { ascending: false });
+
+            if (!sessError && remoteSessions) {
+                history = remoteSessions.map(rs => ({
+                    id: rs.id,
+                    date: rs.work_date,
+                    start: new Date(rs.start_time).getTime(),
+                    end: rs.end_time ? new Date(rs.end_time).getTime() : null,
+                    breaks: rs.breaks.map((rb: any) => ({
+                        id: rb.id,
+                        start: new Date(rb.start_time).getTime(),
+                        end: rb.end_time ? new Date(rb.end_time).getTime() : null,
+                        type: rb.break_type
+                    }))
+                }));
+            }
         }
+
+        // Fallback or Merge with localStorage (optional)
+        if (history.length === 0) {
+            const keys = Object.keys(localStorage).filter(k => k.startsWith('workTimer_sessions_'));
+            keys.forEach(k => {
+                history = history.concat(safeJSONParse<Session[]>(localStorage.getItem(k), []));
+            });
+        }
+
+        setAllHistoricalSessions(history);
 
         const savedState = localStorage.getItem('workTimer_state');
         if (savedState) setState(savedState as TimerState);
@@ -410,13 +446,6 @@ export default function WorkTimer() {
 
         const savedDisabledHolidays = localStorage.getItem('workTimer_disabledHolidays');
         if (savedDisabledHolidays) setDisabledHolidays(safeJSONParse<string[]>(savedDisabledHolidays, []));
-
-        const keys = Object.keys(localStorage).filter(k => k.startsWith('workTimer_sessions_'));
-        let history: Session[] = [];
-        keys.forEach(k => {
-            history = history.concat(safeJSONParse<Session[]>(localStorage.getItem(k), []));
-        });
-        setAllHistoricalSessions(history);
     };
 
     useEffect(() => {
@@ -451,44 +480,96 @@ export default function WorkTimer() {
 
     // --- Handlers ---
 
-    const handleCheckIn = () => {
+    const handleCheckIn = async () => {
         const currentMonth = getLocalMonthKey();
         if (selectedMonth !== currentMonth) setSelectedMonth(currentMonth);
 
+        const startTime = Date.now();
         const newSession: Session = {
             id: generateId(),
             date: todayDateKey,
-            start: Date.now(),
+            start: startTime,
             end: null,
             breaks: []
         };
+
+        // Sync to Supabase
+        if (user) {
+            const { data, error } = await supabase.from('sessions').insert({
+                id: newSession.id,
+                user_id: user.id,
+                work_date: todayDateKey,
+                start_time: new Date(startTime).toISOString()
+            }).select();
+            if (error) console.error("Error syncing check-in:", error);
+        }
+
         setSession(newSession);
         setState('WORKING');
     };
 
-    const toggleBreak = (type: BreakType) => {
+    const toggleBreak = async (type: BreakType) => {
         if (!session) return;
+        const nowMs = Date.now();
+
         if (state === 'WORKING') {
-            const newBreak: Break = { id: generateId(), start: Date.now(), end: null, type };
+            const newBreak: Break = { id: generateId(), start: nowMs, end: null, type };
+
+            // Sync to Supabase
+            if (user) {
+                const { error } = await supabase.from('breaks').insert({
+                    id: newBreak.id,
+                    session_id: session.id,
+                    break_type: type,
+                    start_time: new Date(nowMs).toISOString()
+                });
+                if (error) console.error("Error syncing break start:", error);
+            }
+
             setSession({ ...session, breaks: [...session.breaks, newBreak] });
             setState('ON_BREAK');
         } else if (state === 'ON_BREAK') {
             const activeBreak = session.breaks.find(b => b.end === null);
             if (activeBreak?.type === type) {
-                const updatedBreaks = session.breaks.map(b => b.end === null ? { ...b, end: Date.now() } : b);
+                const updatedBreaks = session.breaks.map(b => b.end === null ? { ...b, end: nowMs } : b);
+
+                // Sync to Supabase
+                if (user && activeBreak) {
+                    const { error } = await supabase.from('breaks')
+                        .update({ end_time: new Date(nowMs).toISOString() })
+                        .eq('id', activeBreak.id);
+                    if (error) console.error("Error syncing break end:", error);
+                }
+
                 setSession({ ...session, breaks: updatedBreaks });
                 setState('WORKING');
             }
         }
     };
 
-    const handleCheckOut = () => {
+    const handleCheckOut = async () => {
         if (!session) return;
+        const nowMs = Date.now();
         let sessionToSave = { ...session };
+
         if (state === 'ON_BREAK') {
-            sessionToSave.breaks = sessionToSave.breaks.map(b => b.end === null ? { ...b, end: Date.now() } : b);
+            const activeBreak = sessionToSave.breaks.find(b => b.end === null);
+            if (activeBreak && user) {
+                await supabase.from('breaks').update({ end_time: new Date(nowMs).toISOString() }).eq('id', activeBreak.id);
+            }
+            sessionToSave.breaks = sessionToSave.breaks.map(b => b.end === null ? { ...b, end: nowMs } : b);
         }
-        sessionToSave.end = Date.now();
+
+        sessionToSave.end = nowMs;
+
+        // Sync to Supabase
+        if (user) {
+            const { error } = await supabase.from('sessions')
+                .update({ end_time: new Date(nowMs).toISOString() })
+                .eq('id', session.id);
+            if (error) console.error("Error syncing check-out:", error);
+        }
+
         saveSessionToStorage(sessionToSave);
         setSession(null);
         setState('IDLE');
