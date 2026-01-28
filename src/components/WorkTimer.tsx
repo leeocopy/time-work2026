@@ -219,6 +219,7 @@ export default function WorkTimer() {
         end: '',
         breaks: [] as { id: string, start: string, end: string, type: BreakType }[]
     });
+    const [manualFormMode, setManualFormMode] = useState<'session' | 'break'>('session');
     const [validationErrors, setValidationErrors] = useState<string[]>([]);
 
     // Holiday State
@@ -760,58 +761,116 @@ export default function WorkTimer() {
     // --- Modal Handlers ---
 
     const handleSaveManual = async () => {
-        const startMs = timeToMs(formData.start, formData.date);
-        let endMs = timeToMs(formData.end, formData.date);
-        if (endMs < startMs) endMs += 24 * 60 * 60 * 1000;
+        const errors: string[] = [];
+        if (!formData.date) errors.push("Date is required.");
 
-        const newSession: Session = {
-            id: editingId || generateId(),
-            date: formData.date,
-            start: startMs,
-            end: endMs,
-            breaks: formData.breaks.map(b => {
-                let bStart = timeToMs(b.start, formData.date);
-                let bEnd = timeToMs(b.end, formData.date);
-                if (bStart < startMs) bStart += 24 * 60 * 60 * 1000;
-                if (bEnd < bStart) bEnd += 24 * 60 * 60 * 1000;
-                return { id: b.id || generateId(), type: b.type, start: bStart, end: bEnd };
-            })
-        };
+        let startMs = 0;
+        let endMs = 0;
 
-        if (editingId) {
-            const old = allHistoricalSessions.find(s => s.id === editingId);
-            if (old && old.date !== newSession.date) {
-                // If date changed, we need to ensure we don't have duplicates or mismatched date-keys
-                // But the ID is the same, so Supabase will just update it. 
-                // However, deleteSession has a confirmation, so let's just let the upsert handle it.
+        if (manualFormMode === 'session') {
+            if (!formData.start || !formData.end) {
+                errors.push("Start and End times are required for a work session.");
+            } else {
+                startMs = timeToMs(formData.start, formData.date);
+                endMs = timeToMs(formData.end, formData.date);
+                if (endMs < startMs) endMs += 24 * 60 * 60 * 1000;
             }
         }
 
-        // Sync to Supabase
-        if (user) {
-            // Upsert Session
-            const { error: sErr } = await supabase.from('sessions').upsert({
-                id: newSession.id,
-                user_id: user.id,
-                work_date: newSession.date,
-                start_time: new Date(newSession.start).toISOString(),
-                end_time: new Date(newSession.end!).toISOString()
+        if (formData.breaks.some(b => !b.start || !b.end)) {
+            errors.push("All breaks must have start and end times.");
+        }
+
+        if (errors.length > 0) {
+            setValidationErrors(errors);
+            return;
+        }
+
+        let sessionId = editingId;
+
+        if (manualFormMode === 'break' && !editingId) {
+            // Find an existing session for this date to attach the break to
+            const existing = allHistoricalSessions.find(s => s.date === formData.date);
+            if (existing) {
+                sessionId = existing.id;
+            } else {
+                // Create a placeholder session if none exists
+                sessionId = generateId();
+                if (user) {
+                    const firstBreak = formData.breaks[0];
+                    const bStart = timeToMs(firstBreak.start, formData.date);
+                    const bEnd = timeToMs(firstBreak.end, formData.date);
+                    await supabase.from('sessions').insert({
+                        id: sessionId,
+                        user_id: user.id,
+                        work_date: formData.date,
+                        start_time: new Date(bStart).toISOString(),
+                        end_time: new Date(bEnd).toISOString()
+                    });
+                }
+            }
+        } else if (!editingId) {
+            sessionId = generateId();
+            if (user) {
+                await supabase.from('sessions').insert({
+                    id: sessionId,
+                    user_id: user.id,
+                    work_date: formData.date,
+                    start_time: new Date(startMs).toISOString(),
+                    end_time: new Date(endMs).toISOString()
+                });
+            }
+        } else {
+            // Edit existing
+            if (user) {
+                await supabase.from('sessions').update({
+                    work_date: formData.date,
+                    start_time: new Date(startMs).toISOString(),
+                    end_time: new Date(endMs).toISOString()
+                }).eq('id', editingId);
+            }
+        }
+
+        // Handle Breaks
+        if (sessionId && user) {
+            // If in session mode, we sync the whole list
+            // If in break mode, we append to existing or sync the list
+            // Simplifying: just sync the current list for that session if we are editing
+            // or if it's a new break-only, we might want to append.
+            // But let's stay consistent: replace all breaks for this session.
+
+            let finalBreaks = formData.breaks.map(b => {
+                let bStart = timeToMs(b.start, formData.date);
+                let bEnd = timeToMs(b.end, formData.date);
+                // For break-only mode, we don't have startMs/endMs of parent session easily, 
+                // but we can assume simple calendar day or handle midnight crossing relative to bStart
+                if (bEnd < bStart) bEnd += 24 * 60 * 60 * 1000;
+                return { id: b.id || generateId(), type: b.type, start: bStart, end: bEnd };
             });
 
-            if (!sErr) {
-                // Delete existing breaks for this session and re-insert
-                await supabase.from('breaks').delete().eq('session_id', newSession.id);
-                if (newSession.breaks.length > 0) {
-                    await supabase.from('breaks').insert(
-                        newSession.breaks.map(b => ({
-                            id: b.id,
-                            session_id: newSession.id,
-                            break_type: b.type,
-                            start_time: new Date(b.start).toISOString(),
-                            end_time: new Date(b.end!).toISOString()
-                        }))
-                    );
+            if (manualFormMode === 'break' && editingId === null) {
+                const existing = allHistoricalSessions.find(s => s.id === sessionId);
+                if (existing) {
+                    // Append new breaks to existing ones
+                    const existingBreaks = existing.breaks.map(b => ({
+                        ...b,
+                        end: b.end || b.start
+                    }));
+                    finalBreaks = [...existingBreaks, ...finalBreaks];
                 }
+            }
+
+            await supabase.from('breaks').delete().eq('session_id', sessionId);
+            if (finalBreaks.length > 0) {
+                await supabase.from('breaks').insert(
+                    finalBreaks.map(b => ({
+                        id: b.id,
+                        session_id: sessionId,
+                        break_type: b.type,
+                        start_time: new Date(b.start).toISOString(),
+                        end_time: new Date(b.end!).toISOString()
+                    }))
+                );
             }
         }
 
@@ -835,6 +894,7 @@ export default function WorkTimer() {
 
     const openEdit = (s: Session) => {
         setEditingId(s.id);
+        setManualFormMode('session');
         setFormData({
             date: s.date,
             start: msToHHMM(s.start),
@@ -1368,6 +1428,15 @@ export default function WorkTimer() {
                                                     </div>
                                                     <div className={styles.entryMeta}>
                                                         <span>{minutesToHHMM(entryWorkedMinutes(s, s.end || now)).slice(1)} worked</span>
+                                                        {s.breaks.length > 0 && (
+                                                            <div className={styles.breaksListMini}>
+                                                                {s.breaks.map(b => (
+                                                                    <span key={b.id} className={styles.breakTag}>
+                                                                        {b.type === 'lunch' ? '🍱' : '☕'} {msToHHMM(b.start)}-{b.end ? msToHHMM(b.end) : '?'}
+                                                                    </span>
+                                                                ))}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                 </div>
                                                 <div className={styles.entryActions}>
@@ -1417,11 +1486,30 @@ export default function WorkTimer() {
                     <div className={styles.card} style={{ padding: '1rem' }}>
                         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                             <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Forgot to track?</span>
-                            <button className={`${styles.button} ${styles.btnSecondary}`}
-                                onClick={() => { setEditingId(null); setFormData({ date: todayDateKey, start: msToHHMM(now), end: msToHHMM(now + 3600000), breaks: [] }); setValidationErrors([]); setManualFormOpen(true); }}
-                                style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}>
-                                + Add Manually
-                            </button>
+                            <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                <button className={`${styles.button} ${styles.btnSecondary}`}
+                                    onClick={() => {
+                                        setEditingId(null);
+                                        setManualFormMode('session');
+                                        setFormData({ date: todayDateKey, start: '', end: '', breaks: [] });
+                                        setValidationErrors([]);
+                                        setManualFormOpen(true);
+                                    }}
+                                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }}>
+                                    + Session
+                                </button>
+                                <button className={`${styles.button} ${styles.btnSecondary}`}
+                                    onClick={() => {
+                                        setEditingId(null);
+                                        setManualFormMode('break');
+                                        setFormData({ date: todayDateKey, start: '', end: '', breaks: [{ id: generateId(), start: '', end: '', type: 'short' }] });
+                                        setValidationErrors([]);
+                                        setManualFormOpen(true);
+                                    }}
+                                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }}>
+                                    + Break
+                                </button>
+                            </div>
                         </div>
                     </div>
 
@@ -1483,43 +1571,81 @@ export default function WorkTimer() {
             {manualFormOpen && (
                 <div className={styles.overlay} onClick={() => setManualFormOpen(false)}>
                     <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                        <h3 className={styles.modalTitle}>{editingId ? 'Edit Session' : 'Add Session'}</h3>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                            <h3 className={styles.modalTitle} style={{ margin: 0 }}>
+                                {editingId ? 'Edit Session' : (manualFormMode === 'session' ? 'Add Work Session' : 'Add Extra Break')}
+                            </h3>
+                            {!editingId && (
+                                <div className={styles.modeToggle}>
+                                    <button className={`${styles.modeBtn} ${manualFormMode === 'session' ? styles.active : ''}`} onClick={() => setManualFormMode('session')}>Work</button>
+                                    <button className={`${styles.modeBtn} ${manualFormMode === 'break' ? styles.active : ''}`} onClick={() => setManualFormMode('break')}>Break</button>
+                                </div>
+                            )}
+                        </div>
 
                         <div className={styles.formGroup}>
                             <label className={styles.label}>Date</label>
                             <input type="date" className={styles.input} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
                         </div>
-                        <div className={styles.controlGrid}>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>Start Time</label>
-                                <input type="time" className={styles.input} value={formData.start} onChange={e => setFormData({ ...formData, start: e.target.value })} />
-                            </div>
-                            <div className={styles.formGroup}>
-                                <label className={styles.label}>End Time</label>
-                                <input type="time" className={styles.input} value={formData.end} onChange={e => setFormData({ ...formData, end: e.target.value })} />
-                            </div>
-                        </div>
 
-                        <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                <label className={styles.label} style={{ margin: 0 }}>Breaks</label>
-                                <button className={`${styles.button} ${styles.btnSecondary}`} style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
-                                    onClick={() => setFormData({ ...formData, breaks: [...formData.breaks, { id: generateId(), start: formData.start, end: formData.start, type: 'short' }] })}>
-                                    + Add Break
-                                </button>
-                            </div>
-                            {formData.breaks.map((b) => (
-                                <div key={b.id} className={styles.breakRow} style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                                    <select className={styles.input} style={{ width: '80px' }} value={b.type} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, type: e.target.value as BreakType } : item) })}>
-                                        <option value="short">Short</option>
-                                        <option value="lunch">Lunch</option>
-                                    </select>
-                                    <input type="time" className={styles.input} value={b.start} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, start: e.target.value } : item) })} />
-                                    <input type="time" className={styles.input} value={b.end} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, end: e.target.value } : item) })} />
-                                    <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => setFormData({ ...formData, breaks: formData.breaks.filter(item => item.id !== b.id) })}>✕</button>
+                        {manualFormMode === 'session' ? (
+                            <>
+                                <div className={styles.controlGrid}>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Start Time</label>
+                                        <input type="time" className={styles.input} value={formData.start} onChange={e => setFormData({ ...formData, start: e.target.value })} />
+                                    </div>
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>End Time</label>
+                                        <input type="time" className={styles.input} value={formData.end} onChange={e => setFormData({ ...formData, end: e.target.value })} />
+                                    </div>
                                 </div>
-                            ))}
-                        </div>
+
+                                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                        <label className={styles.label} style={{ margin: 0 }}>Breaks within this session</label>
+                                        <button className={`${styles.button} ${styles.btnSecondary}`} style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+                                            onClick={() => setFormData({ ...formData, breaks: [...formData.breaks, { id: generateId(), start: formData.start, end: formData.start, type: 'short' }] })}>
+                                            + Add Break
+                                        </button>
+                                    </div>
+                                    {formData.breaks.map((b) => (
+                                        <div key={b.id} className={styles.breakRow}>
+                                            <select className={styles.input} style={{ width: '85px' }} value={b.type} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, type: e.target.value as BreakType } : item) })}>
+                                                <option value="short">☕ Short</option>
+                                                <option value="lunch">🍱 Lunch</option>
+                                            </select>
+                                            <input type="time" className={styles.input} value={b.start} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, start: e.target.value } : item) })} />
+                                            <span>to</span>
+                                            <input type="time" className={styles.input} value={b.end} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, end: e.target.value } : item) })} />
+                                            <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => setFormData({ ...formData, breaks: formData.breaks.filter(item => item.id !== b.id) })}>✕</button>
+                                        </div>
+                                    ))}
+                                </div>
+                            </>
+                        ) : (
+                            <div style={{ marginTop: '1rem' }}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                                    Add a break period directly to your history.
+                                </div>
+                                {formData.breaks.map((b) => (
+                                    <div key={b.id} className={styles.breakRow}>
+                                        <select className={styles.input} style={{ width: '85px' }} value={b.type} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, type: e.target.value as BreakType } : item) })}>
+                                            <option value="short">☕ Short</option>
+                                            <option value="lunch">🍱 Lunch</option>
+                                        </select>
+                                        <input type="time" className={styles.input} value={b.start} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, start: e.target.value } : item) })} />
+                                        <span>to</span>
+                                        <input type="time" className={styles.input} value={b.end} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, end: e.target.value } : item) })} />
+                                    </div>
+                                ))}
+                                {allHistoricalSessions.filter(s => s.date === formData.date).length > 0 && (
+                                    <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--success-text)', background: 'var(--success-bg)', padding: '0.5rem', borderRadius: '4px' }}>
+                                        ✓ This break will be attached to an existing session on this day.
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
                             <button className={`${styles.button} ${styles.btnSecondary}`} onClick={() => setManualFormOpen(false)}>Cancel</button>

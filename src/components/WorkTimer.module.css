@@ -461,7 +461,27 @@
     font-size: 0.75rem;
     color: var(--text-muted);
     display: flex;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.breaksListMini {
+    margin-top: 0.25rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+}
+
+.breakTag {
+    font-size: 0.65rem;
+    background: rgba(255, 255, 255, 0.03);
+    padding: 0.1rem 0.4rem;
+    border-radius: 4px;
+    color: var(--text-muted);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
 }
 
 .entryActions {
@@ -811,6 +831,32 @@
 }
 
 /* Form refinement */
+.modeToggle {
+    display: flex;
+    background: var(--neutral-bg);
+    padding: 0.25rem;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.modeBtn {
+    padding: 0.3rem 0.8rem;
+    font-size: 0.75rem;
+    border: none;
+    background: none;
+    color: var(--text-muted);
+    cursor: pointer;
+    border-radius: 6px;
+    transition: 0.2s;
+    font-weight: 700;
+}
+
+.modeBtn.active {
+    background: var(--primary);
+    color: white;
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
 .breakRow {
     display: flex;
     gap: 0.5rem;
