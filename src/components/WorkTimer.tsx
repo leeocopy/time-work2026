@@ -456,16 +456,31 @@ export default function WorkTimer() {
             });
         }
 
-        setAllHistoricalSessions(history);
-        setSession(activeSess);
-        setState(currentState);
+        // Fetch Metadata (Closed Days, Holidays)
+        if (authSession) {
+            const { data: metaData } = await supabase.from('user_settings').select('*').single();
+            if (metaData) {
+                if (metaData.closed_days) setClosedDays(metaData.closed_days);
+                if (metaData.disabled_holidays) setDisabledHolidays(metaData.disabled_holidays);
+            }
 
-        const savedClosedDays = localStorage.getItem('workTimer_closedDays');
-        if (savedClosedDays) setClosedDays(safeJSONParse<string[]>(savedClosedDays, []));
-        const savedCustomHolidays = localStorage.getItem('workTimer_customHolidays');
-        if (savedCustomHolidays) setCustomHolidays(safeJSONParse<Holiday[]>(savedCustomHolidays, []));
-        const savedDisabledHolidays = localStorage.getItem('workTimer_disabledHolidays');
-        if (savedDisabledHolidays) setDisabledHolidays(safeJSONParse<string[]>(savedDisabledHolidays, []));
+            const { data: holidaysData } = await supabase.from('custom_holidays').select('*');
+            if (holidaysData) {
+                setCustomHolidays(holidaysData.map(h => ({
+                    id: h.id,
+                    date: h.date,
+                    name: h.name,
+                    isCustom: true
+                })));
+            }
+        } else {
+            const savedClosedDays = localStorage.getItem('workTimer_closedDays');
+            if (savedClosedDays) setClosedDays(safeJSONParse<string[]>(savedClosedDays, []));
+            const savedCustomHolidays = localStorage.getItem('workTimer_customHolidays');
+            if (savedCustomHolidays) setCustomHolidays(safeJSONParse<Holiday[]>(savedCustomHolidays, []));
+            const savedDisabledHolidays = localStorage.getItem('workTimer_disabledHolidays');
+            if (savedDisabledHolidays) setDisabledHolidays(safeJSONParse<string[]>(savedDisabledHolidays, []));
+        }
     };
 
     useEffect(() => {
@@ -484,15 +499,22 @@ export default function WorkTimer() {
 
     useEffect(() => {
         localStorage.setItem('workTimer_closedDays', JSON.stringify(closedDays));
-    }, [closedDays]);
+        if (user) {
+            supabase.from('user_settings').upsert({ user_id: user.id, closed_days: closedDays }, { onConflict: 'user_id' }).then();
+        }
+    }, [closedDays, user]);
 
     useEffect(() => {
         localStorage.setItem('workTimer_customHolidays', JSON.stringify(customHolidays));
+        // We handle custom holidays independently in the add/remove functions for better control
     }, [customHolidays]);
 
     useEffect(() => {
         localStorage.setItem('workTimer_disabledHolidays', JSON.stringify(disabledHolidays));
-    }, [disabledHolidays]);
+        if (user) {
+            supabase.from('user_settings').upsert({ user_id: user.id, disabled_holidays: disabledHolidays }, { onConflict: 'user_id' }).then();
+        }
+    }, [disabledHolidays, user]);
 
     // --- Handlers ---
 
@@ -749,7 +771,7 @@ export default function WorkTimer() {
     }, [allHistoricalSessions, selectedMonth, now, isDateHoliday]);
 
     // --- Holiday Handlers ---
-    const handleAddHoliday = () => {
+    const handleAddHoliday = async () => {
         if (!holidayFormName || !holidayFormDate) return;
         const newHol: Holiday = {
             id: generateId(),
@@ -757,23 +779,36 @@ export default function WorkTimer() {
             name: holidayFormName,
             isCustom: true
         };
+
+        if (user) {
+            await supabase.from('custom_holidays').insert({
+                id: newHol.id,
+                user_id: user.id,
+                date: newHol.date,
+                name: newHol.name
+            });
+        }
+
         setCustomHolidays([...customHolidays, newHol]);
         setAddHolidayForm(false);
         setHolidayFormName('');
         setHolidayFormDate('');
     };
 
-    const toggleHolidayDisable = (hol: Holiday) => {
+    const toggleHolidayDisable = async (hol: Holiday) => {
         if (hol.isCustom) {
-            // Delete custom
+            if (user) {
+                await supabase.from('custom_holidays').delete().eq('id', hol.id);
+            }
             setCustomHolidays(customHolidays.filter(h => h.id !== hol.id));
         } else {
-            // Toggle disable standard
-            if (disabledHolidays.includes(hol.id)) {
-                setDisabledHolidays(disabledHolidays.filter(id => id !== hol.id));
-            } else {
-                setDisabledHolidays([...disabledHolidays, hol.id]);
-            }
+            const isCurrentlyDisabled = disabledHolidays.includes(hol.id);
+            const newList = isCurrentlyDisabled
+                ? disabledHolidays.filter(id => id !== hol.id)
+                : [...disabledHolidays, hol.id];
+
+            setDisabledHolidays(newList);
+            // Sync is handled by useEffect on disabledHolidays
         }
     };
 
@@ -1333,16 +1368,14 @@ export default function WorkTimer() {
                             </div>
 
                             <div className={styles.todayStatsGrid}>
-                                <div className={styles.statCard} style={{ background: 'var(--neutral-bg)' }}>
-                                    <span className={styles.statLabel}>Total Hours</span>
-                                    <span className={styles.statValue} style={{ color: 'var(--success-text)' }}>
+                                <div className={styles.statCard} style={{ background: 'var(--neutral-bg)', position: 'relative', overflow: 'hidden' }}>
+                                    <div className={styles.statLabel}>Total Hours (Today)</div>
+                                    <div className={styles.statValue} style={{ color: 'var(--success-text)' }}>
                                         {minutesToHHMM(todayCalculations.workedToday).slice(1)}
-                                    </span>
-                                    <span style={{ fontSize: '0.65rem', color: monthlyBalanceCalculations.currentMonthlyBalance >= 0 ? 'var(--success-text)' : 'var(--danger-text)', marginTop: '0.2rem', textAlign: 'center' }}>
-                                        {monthlyBalanceCalculations.currentMonthlyBalance >= 0 ?
-                                            `Month: +${minutesToHHMM(monthlyBalanceCalculations.currentMonthlyBalance).slice(1)} saved` :
-                                            `Month: ${minutesToHHMM(monthlyBalanceCalculations.currentMonthlyBalance)} missing`}
-                                    </span>
+                                    </div>
+                                    <div className={`${styles.balanceBadge} ${monthlyBalanceCalculations.currentMonthlyBalance >= 0 ? styles.pos : styles.neg}`}>
+                                        {monthlyBalanceCalculations.currentMonthlyBalance >= 0 ? '+' : ''}{minutesToHHMM(monthlyBalanceCalculations.currentMonthlyBalance).slice(1)} Month
+                                    </div>
                                 </div>
                                 <div className={styles.statCard}>
                                     <span className={styles.statLabel}>Total Break</span>
@@ -1356,7 +1389,6 @@ export default function WorkTimer() {
                                         {(() => {
                                             if (todayCalculations.requiredToday === 0) return 'Holiday';
                                             if (!session) return '--:--';
-                                            // Adjusted Goal = requiredToday - monthlyBalanceCalculations.monthlyCarryOver
                                             const adjGoalMs = (todayCalculations.requiredToday - monthlyBalanceCalculations.monthlyCarryOver) * 60000;
                                             const workedMs = todayCalculations.workedToday * 60000;
                                             const remaining = adjGoalMs - workedMs;
@@ -1376,291 +1408,312 @@ export default function WorkTimer() {
                                             return `${Math.floor(adj / 60)}h${String(Math.abs(adj % 60)).padStart(2, '0')}m`;
                                         })()}
                                     </span>
-                                    <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem', textAlign: 'center' }}>
+                                    <div style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem' }}>
                                         {monthlyBalanceCalculations.monthlyCarryOver >= 0 ?
-                                            `Month Saved: +${minutesToHHMM(monthlyBalanceCalculations.monthlyCarryOver).slice(1)}` :
-                                            `Month Debt: ${minutesToHHMM(monthlyBalanceCalculations.monthlyCarryOver)}`}
-                                    </span>
+                                            `Saved: +${minutesToHHMM(monthlyBalanceCalculations.monthlyCarryOver).slice(1)}` :
+                                            `Debt: ${minutesToHHMM(monthlyBalanceCalculations.monthlyCarryOver)}`}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
 
-                    {/* 4. Productivity Analytics */}
-                    <div className={styles.card}>
-                        <div className={styles.cardTitle}>Productivity Analytics</div>
+                        {/* 4. Productivity Analytics */}
+                        <div className={styles.card}>
+                            <div className={styles.cardTitle}>Productivity Analytics</div>
 
-                        <div className={styles.kpiGrid}>
-                            <div className={styles.kpiCard}>
-                                <div className={styles.kpiLabel}>Avg/Day</div>
-                                <div className={styles.kpiValue}>{minutesToHHMM(analyticsData.weeklyAvg).slice(1)}</div>
+                            <div className={styles.kpiGrid}>
+                                <div className={styles.kpiCard}>
+                                    <div className={styles.kpiLabel}>Avg/Day</div>
+                                    <div className={styles.kpiValue}>{minutesToHHMM(analyticsData.weeklyAvg).slice(1)}</div>
+                                </div>
+                                <div className={styles.kpiCard}>
+                                    <div className={styles.kpiLabel}>Best</div>
+                                    <div className={styles.kpiValue} style={{ color: 'var(--success-text)' }}>{analyticsData.mostProductive}</div>
+                                </div>
+                                <div className={styles.kpiCard}>
+                                    <div className={styles.kpiLabel}>Week Total</div>
+                                    <div className={styles.kpiValue}>{minutesToHHMM(analyticsData.totalWorkedWeek).slice(1)}</div>
+                                </div>
                             </div>
-                            <div className={styles.kpiCard}>
-                                <div className={styles.kpiLabel}>Best</div>
-                                <div className={styles.kpiValue} style={{ color: 'var(--success-text)' }}>{analyticsData.mostProductive}</div>
+
+                            <div className={styles.chartWrapper}>
+                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Weekly Activity</div>
+                                <div className={styles.chartContainer}>
+                                    {analyticsData.dailyStats.map((d, i) => (
+                                        <div key={i} className={styles.chartColumn} title={`${d.date}: ${Math.floor(d.worked / 60)}h${String(d.worked % 60).padStart(2, '0')}m`}>
+                                            <div className={styles.chartBarBg}>
+                                                <div className={`${styles.chartBarFill} ${d.isToday ? styles.today : ''}`}
+                                                    style={{ height: `${Math.min((d.worked / 600) * 100, 100)}%` }}>
+                                                    <div className={styles.chartTooltip}>
+                                                        {Math.floor(d.worked / 60)}h${String(d.worked % 60).padStart(2, '0')}m
+                                                    </div>
+                                                </div>
+                                            </div>
+                                            <div className={styles.chartLabel}>{d.dayName}</div>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
-                            <div className={styles.kpiCard}>
-                                <div className={styles.kpiLabel}>Week Total</div>
-                                <div className={styles.kpiValue}>{minutesToHHMM(analyticsData.totalWorkedWeek).slice(1)}</div>
+
+                            {/* Achievements */}
+                            <div className={styles.badgesGrid} style={{ marginTop: '1.5rem', gap: '0.5rem' }}>
+                                <div className={`${styles.badge} ${analyticsData.achievements.earlyBird ? styles.unlocked : ''}`}>
+                                    <div style={{ fontSize: '1.25rem' }}>🌅</div>
+                                    <div className={styles.badgeLabel}>Early Bird</div>
+                                </div>
+                                <div className={`${styles.badge} ${analyticsData.achievements.consistency ? styles.unlocked : ''}`}>
+                                    <div style={{ fontSize: '1.25rem' }}>🔥</div>
+                                    <div className={styles.badgeLabel}>Streak</div>
+                                </div>
+                                <div className={`${styles.badge} ${analyticsData.achievements.focusMaster ? styles.unlocked : ''}`}>
+                                    <div style={{ fontSize: '1.25rem' }}>🎯</div>
+                                    <div className={styles.badgeLabel}>Focus</div>
+                                </div>
                             </div>
                         </div>
 
-                        <div className={styles.chartWrapper}>
-                            <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Weekly Activity</div>
-                            <div className={styles.chartContainer}>
-                                {analyticsData.dailyStats.map((d, i) => (
-                                    <div key={i} className={styles.chartColumn} title={`${d.date}: ${Math.floor(d.worked / 60)}h${String(d.worked % 60).padStart(2, '0')}m`}>
-                                        <div className={styles.chartBarBg}>
-                                            <div className={`${styles.chartBarFill} ${d.isToday ? styles.today : ''}`}
-                                                style={{ height: `${Math.min((d.worked / 600) * 100, 100)}%` }}>
-                                                <div className={styles.chartTooltip}>
-                                                    {Math.floor(d.worked / 60)}h${String(d.worked % 60).padStart(2, '0')}m
-                                                </div>
-                                            </div>
+                        {/* 5. Logged Entries */}
+                        <div className={styles.card}>
+                            <div className={styles.cardTitle} style={{ marginBottom: '1rem' }}>
+                                <span>Logged Entries</span>
+                                <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className={styles.input} style={{ width: 'auto', padding: '0.4rem', fontSize: '0.8rem' }} />
+                            </div>
+
+                            <div className={styles.entriesList}>
+                                {sortedGroups.length === 0 && (
+                                    <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+                                        No entries.
+                                    </div>
+                                )}
+                                {sortedGroups.map(group => (
+                                    <div key={group.date} className={styles.dateGroup}>
+                                        <div className={styles.dateHeader}>
+                                            <span style={{ opacity: 0.6 }}>📅</span> {new Date(group.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
                                         </div>
-                                        <div className={styles.chartLabel}>{d.dayName}</div>
+                                        <div className={styles.entriesTimeline}>
+                                            {group.sessions.map((s: Session) => (
+                                                <React.Fragment key={s.id}>
+                                                    <div className={styles.entryItem}>
+                                                        <div className={styles.entryIndicator} style={{ background: 'var(--primary)' }}></div>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div className={styles.entryTime}>
+                                                                {msToHHMM(s.start)} - {s.end ? msToHHMM(s.end) : <span style={{ color: 'var(--primary)', animation: 'pulse 2s infinite' }}>Tracking...</span>}
+                                                                <span className={styles.entryTypeTag}>SESSION</span>
+                                                            </div>
+                                                            <div className={styles.entryMeta}>
+                                                                <span>{minutesToHHMM(entryWorkedMinutes(s, s.end || now)).slice(1)} worked</span>
+                                                            </div>
+                                                        </div>
+                                                        <div className={styles.entryActions}>
+                                                            <button className={styles.btnIcon} onClick={() => openEdit(s)}>✏️</button>
+                                                            <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => deleteSession(s.id)}>🗑️</button>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Independent Break Tracks */}
+                                                    {s.breaks.map((b: Break) => (
+                                                        <div key={b.id} className={`${styles.entryItem} ${styles.entryBreakLarge}`}>
+                                                            <div className={styles.entryIndicator} style={{ background: 'var(--warning)' }}></div>
+                                                            <div style={{ flex: 1 }}>
+                                                                <div className={styles.entryTime} style={{ color: 'var(--warning-text)' }}>
+                                                                    {msToHHMM(b.start)} - {b.end ? msToHHMM(b.end) : 'Running...'}
+                                                                    <span className={styles.entryTypeTag} style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
+                                                                        {b.type.toUpperCase()}
+                                                                    </span>
+                                                                </div>
+                                                                <div className={styles.entryMeta}>
+                                                                    <span>{Math.floor(((b.end || now) - b.start) / 60000)}m break duration</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    ))}
+                                                </React.Fragment>
+                                            ))}
+                                        </div>
                                     </div>
                                 ))}
                             </div>
                         </div>
-
-                        {/* Achievements */}
-                        <div className={styles.badgesGrid} style={{ marginTop: '1.5rem', gap: '0.5rem' }}>
-                            <div className={`${styles.badge} ${analyticsData.achievements.earlyBird ? styles.unlocked : ''}`}>
-                                <div style={{ fontSize: '1.25rem' }}>🌅</div>
-                                <div className={styles.badgeLabel}>Early Bird</div>
-                            </div>
-                            <div className={`${styles.badge} ${analyticsData.achievements.consistency ? styles.unlocked : ''}`}>
-                                <div style={{ fontSize: '1.25rem' }}>🔥</div>
-                                <div className={styles.badgeLabel}>Streak</div>
-                            </div>
-                            <div className={`${styles.badge} ${analyticsData.achievements.focusMaster ? styles.unlocked : ''}`}>
-                                <div style={{ fontSize: '1.25rem' }}>🎯</div>
-                                <div className={styles.badgeLabel}>Focus</div>
-                            </div>
-                        </div>
                     </div>
 
-                    {/* 5. Logged Entries */}
-                    <div className={styles.card}>
-                        <div className={styles.cardTitle} style={{ marginBottom: '1rem' }}>
-                            <span>Logged Entries</span>
-                            <input type="month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className={styles.input} style={{ width: 'auto', padding: '0.4rem', fontSize: '0.8rem' }} />
-                        </div>
+                    {/* --- RIGHT COLUMN --- */}
+                    <div className={styles.column}>
+                        {/* Balance Overview */}
+                        <div className={styles.card}>
+                            <div className={styles.cardTitle}>Balance Overview</div>
 
-                        <div className={styles.entriesList}>
-                            {sortedGroups.length === 0 && (
-                                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-                                    No entries.
+                            <div className={styles.balanceInfoGrid}>
+                                <div className={styles.statCard} style={{ background: monthlyBalanceCalculations.currentMonthlyBalance < 0 ? 'rgba(239, 68, 68, 0.05)' : 'rgba(34, 197, 94, 0.05)' }}>
+                                    <span className={styles.statLabel}>Current Month</span>
+                                    <span className={styles.statValue} style={{ color: monthlyBalanceCalculations.currentMonthlyBalance < 0 ? 'var(--danger-text)' : 'var(--success-text)' }}>
+                                        {minutesToHHMM(monthlyBalanceCalculations.currentMonthlyBalance)}
+                                    </span>
                                 </div>
-                            )}
-                            {sortedGroups.map(group => (
-                                <div key={group.date} className={styles.dateGroup}>
-                                    <div className={styles.dateHeader}>
-                                        <span style={{ opacity: 0.6 }}>📅</span> {new Date(group.date).toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' })}
-                                    </div>
-                                    <div className={styles.entriesTimeline}>
-                                        {group.sessions.map((s: Session) => (
-                                            <React.Fragment key={s.id}>
-                                                <div className={styles.entryItem}>
-                                                    <div className={styles.entryIndicator} style={{ background: 'var(--primary)' }}></div>
-                                                    <div style={{ flex: 1 }}>
-                                                        <div className={styles.entryTime}>
-                                                            {msToHHMM(s.start)} - {s.end ? msToHHMM(s.end) : <span style={{ color: 'var(--primary)', animation: 'pulse 2s infinite' }}>Tracking...</span>}
-                                                            <span className={styles.entryTypeTag}>SESSION</span>
-                                                        </div>
-                                                        <div className={styles.entryMeta}>
-                                                            <span>{minutesToHHMM(entryWorkedMinutes(s, s.end || now)).slice(1)} worked</span>
-                                                        </div>
-                                                    </div>
-                                                    <div className={styles.entryActions}>
-                                                        <button className={styles.btnIcon} onClick={() => openEdit(s)}>✏️</button>
-                                                        <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => deleteSession(s.id)}>🗑️</button>
-                                                    </div>
-                                                </div>
-
-                                                {/* Independent Break Tracks */}
-                                                {s.breaks.map((b: Break) => (
-                                                    <div key={b.id} className={`${styles.entryItem} ${styles.entryBreakLarge}`}>
-                                                        <div className={styles.entryIndicator} style={{ background: 'var(--warning)' }}></div>
-                                                        <div style={{ flex: 1 }}>
-                                                            <div className={styles.entryTime} style={{ color: 'var(--warning-text)' }}>
-                                                                {msToHHMM(b.start)} - {b.end ? msToHHMM(b.end) : 'Running...'}
-                                                                <span className={styles.entryTypeTag} style={{ background: 'var(--warning-bg)', color: 'var(--warning-text)' }}>
-                                                                    {b.type.toUpperCase()}
-                                                                </span>
-                                                            </div>
-                                                            <div className={styles.entryMeta}>
-                                                                <span>{Math.floor(((b.end || now) - b.start) / 60000)}m break duration</span>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </React.Fragment>
-                                        ))}
-                                    </div>
+                                <div className={styles.statCard}>
+                                    <span className={styles.statLabel}>{selectedMonth} Historical</span>
+                                    <span className={styles.statValue}>
+                                        {monthStats.hasData ? minutesToHHMM(monthStats.balanceMin) : '--'}
+                                    </span>
                                 </div>
-                            ))}
-                        </div>
-                    </div>
-                </div>
-
-                {/* --- RIGHT COLUMN --- */}
-                <div className={styles.column}>
-                    {/* Balance Overview */}
-                    <div className={styles.card}>
-                        <div className={styles.cardTitle}>Balance Overview</div>
-
-                        <div className={styles.balanceOverview}>
-                            <div className={styles.balanceCardBig} style={{
-                                background: todayCalculations.displayTodayBalance < 0 ? 'var(--danger-bg)' : 'var(--success-bg)',
-                            }}>
-                                <span className={styles.label} style={{ color: todayCalculations.displayTodayBalance < 0 ? 'var(--danger-text)' : 'var(--success-text)' }}>Daily Balance</span>
-                                <span className={styles.value} style={{
-                                    color: todayCalculations.displayTodayBalance < 0 ? 'var(--danger-text)' : 'var(--success-text)',
-                                }}>
-                                    {(!todayCalculations.hasActivity && !todayCalculations.isClosed) ? '--' : minutesToHHMM(todayCalculations.displayTodayBalance)}
-                                </span>
-                            </div>
-                            <div className={styles.balanceCardBig} style={{
-                                background: monthStats.balanceMin < 0 ? 'var(--danger-bg)' : 'var(--success-bg)',
-                            }}>
-                                <span className={styles.label} style={{ color: monthStats.balanceMin < 0 ? 'var(--danger-text)' : 'var(--success-text)' }}>Monthly Balance</span>
-                                <span className={styles.value} style={{
-                                    color: monthStats.balanceMin < 0 ? 'var(--danger-text)' : 'var(--success-text)',
-                                }}>
-                                    {monthStats.hasData ? minutesToHHMM(monthStats.balanceMin) : '--'}
-                                </span>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Manual Entry Quick Action */}
-                    <div className={styles.card} style={{ padding: '1rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Forgot to track?</span>
-                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                                <button className={`${styles.button} ${styles.btnSecondary}`}
-                                    onClick={() => {
-                                        setEditingId(null);
-                                        setManualFormMode('session');
-                                        setFormData({ date: todayDateKey, start: '', end: '', breaks: [] });
-                                        setValidationErrors([]);
-                                        setManualFormOpen(true);
-                                    }}
-                                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }}>
-                                    + Session
-                                </button>
-                                <button className={`${styles.button} ${styles.btnSecondary}`}
-                                    onClick={() => {
-                                        setEditingId(null);
-                                        setManualFormMode('break');
-                                        setFormData({ date: todayDateKey, start: '', end: '', breaks: [{ id: generateId(), start: '', end: '', type: 'short' }] });
-                                        setValidationErrors([]);
-                                        setManualFormOpen(true);
-                                    }}
-                                    style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }}>
-                                    + Break
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Holidays & Calendar */}
-                    <div className={styles.card}>
-                        <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <span>Calendar</span>
-                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedMonth).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
-                        </div>
-
-                        <div className={styles.calendarGrid}>
-                            {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <div key={i} className={styles.calendarHeader}>{d}</div>)}
-                            {calendarDays.map((day, i) => (
-                                day ? (
-                                    <div key={i} className={`${styles.calendarDay} ${day.isToday ? styles.today : ''} ${day.isHoliday ? styles.holiday : ''}`} title={day.holiday?.name}>
-                                        <span>{day.day}</span>
-                                        {day.isHoliday && <span style={{ fontSize: '0.6rem' }}>★</span>}
-                                    </div>
-                                ) : (
-                                    <div key={i} className={styles.calendarDay}></div>
-                                )
-                            ))}
-                        </div>
-
-                        <div className={styles.holidayList}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
-                                <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>Holidays</span>
-                                <button className={styles.btnSecondary} onClick={() => setAddHolidayForm(!addHolidayForm)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}>
-                                    {addHolidayForm ? 'Cancel' : '+ Add'}
-                                </button>
                             </div>
 
-                            {addHolidayForm && (
-                                <div className={styles.controlGrid} style={{ marginBottom: '1rem', background: 'var(--neutral-bg)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
-                                    <input type="date" value={holidayFormDate} onChange={e => setHolidayFormDate(e.target.value)} className={styles.input} />
-                                    <input type="text" placeholder="Name" value={holidayFormName} onChange={e => setHolidayFormName(e.target.value)} className={styles.input} />
-                                    <button className={`${styles.button} ${styles.btnPrimary}`} onClick={handleAddHoliday} disabled={!holidayFormDate || !holidayFormName}>Save</button>
+                            <div className={styles.metaInfoGrid}>
+                                <div className={styles.metaItem}>
+                                    <span className={styles.metaLabel}>Month Goal</span>
+                                    <span className={styles.metaValue}>{Math.floor(monthlyBalanceCalculations.monthlyTotalRequired / 60)}h</span>
                                 </div>
-                            )}
+                                <div className={styles.metaItem}>
+                                    <span className={styles.metaLabel}>Month Worked</span>
+                                    <span className={styles.metaValue}>{Math.floor(monthlyBalanceCalculations.monthlyTotalWorked / 60)}h</span>
+                                </div>
+                            </div>
+                        </div>
 
-                            {activeHolidaysList.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No holidays.</div>}
-                            {activeHolidaysList.map(h => (
-                                <div key={h.id} className={`${styles.holidayItem} ${disabledHolidays.includes(h.id) ? styles.disabled : styles.active}`}>
-                                    <div>
-                                        <span className={styles.holidayDate}>{new Date(h.date).getDate()}</span>
-                                        <span className={styles.holidayName} style={{ marginLeft: '0.5rem' }}>{h.name}</span>
-                                    </div>
-                                    <button className={styles.btnIcon} onClick={() => toggleHolidayDisable(h)} title={h.isCustom ? "Remove" : "Disable"}>
-                                        {h.isCustom ? '🗑️' : (disabledHolidays.includes(h.id) ? 'Enable' : 'Disable')}
+                        {/* Manual Entry Quick Action */}
+                        <div className={styles.card} style={{ padding: '1rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                <span style={{ fontWeight: '600', fontSize: '0.9rem' }}>Forgot to track?</span>
+                                <div style={{ display: 'flex', gap: '0.4rem' }}>
+                                    <button className={`${styles.button} ${styles.btnSecondary}`}
+                                        onClick={() => {
+                                            setEditingId(null);
+                                            setManualFormMode('session');
+                                            setFormData({ date: todayDateKey, start: '', end: '', breaks: [] });
+                                            setValidationErrors([]);
+                                            setManualFormOpen(true);
+                                        }}
+                                        style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }}>
+                                        + Session
+                                    </button>
+                                    <button className={`${styles.button} ${styles.btnSecondary}`}
+                                        onClick={() => {
+                                            setEditingId(null);
+                                            setManualFormMode('break');
+                                            setFormData({ date: todayDateKey, start: '', end: '', breaks: [{ id: generateId(), start: '', end: '', type: 'short' }] });
+                                            setValidationErrors([]);
+                                            setManualFormOpen(true);
+                                        }}
+                                        style={{ padding: '0.4rem 0.6rem', fontSize: '0.75rem' }}>
+                                        + Break
                                     </button>
                                 </div>
-                            ))}
+                            </div>
+                        </div>
+
+                        {/* Holidays & Calendar */}
+                        <div className={styles.card}>
+                            <div className={styles.cardTitle} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span>Calendar</span>
+                                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{new Date(selectedMonth).toLocaleDateString(undefined, { month: 'long', year: 'numeric' })}</span>
+                            </div>
+
+                            <div className={styles.calendarGrid}>
+                                {['M', 'T', 'W', 'T', 'F', 'S', 'S'].map((d, i) => <div key={i} className={styles.calendarHeader}>{d}</div>)}
+                                {calendarDays.map((day, i) => (
+                                    day ? (
+                                        <div key={i} className={`${styles.calendarDay} ${day.isToday ? styles.today : ''} ${day.isHoliday ? styles.holiday : ''}`} title={day.holiday?.name}>
+                                            <span>{day.day}</span>
+                                            {day.isHoliday && <span style={{ fontSize: '0.6rem' }}>★</span>}
+                                        </div>
+                                    ) : (
+                                        <div key={i} className={styles.calendarDay}></div>
+                                    )
+                                ))}
+                            </div>
+
+                            <div className={styles.holidayList}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                    <span style={{ fontSize: '0.85rem', fontWeight: '600' }}>Holidays</span>
+                                    <button className={styles.btnSecondary} onClick={() => setAddHolidayForm(!addHolidayForm)} style={{ padding: '0.2rem 0.5rem', fontSize: '0.7rem' }}>
+                                        {addHolidayForm ? 'Cancel' : '+ Add'}
+                                    </button>
+                                </div>
+
+                                {addHolidayForm && (
+                                    <div className={styles.controlGrid} style={{ marginBottom: '1rem', background: 'var(--neutral-bg)', padding: '1rem', borderRadius: 'var(--radius-sm)' }}>
+                                        <input type="date" value={holidayFormDate} onChange={e => setHolidayFormDate(e.target.value)} className={styles.input} />
+                                        <input type="text" placeholder="Name" value={holidayFormName} onChange={e => setHolidayFormName(e.target.value)} className={styles.input} />
+                                        <button className={`${styles.button} ${styles.btnPrimary}`} onClick={handleAddHoliday} disabled={!holidayFormDate || !holidayFormName}>Save</button>
+                                    </div>
+                                )}
+
+                                {activeHolidaysList.length === 0 && <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>No holidays.</div>}
+                                {activeHolidaysList.map(h => (
+                                    <div key={h.id} className={`${styles.holidayItem} ${disabledHolidays.includes(h.id) ? styles.disabled : styles.active}`}>
+                                        <div>
+                                            <span className={styles.holidayDate}>{new Date(h.date).getDate()}</span>
+                                            <span className={styles.holidayName} style={{ marginLeft: '0.5rem' }}>{h.name}</span>
+                                        </div>
+                                        <button className={styles.btnIcon} onClick={() => toggleHolidayDisable(h)} title={h.isCustom ? "Remove" : "Disable"}>
+                                            {h.isCustom ? '🗑️' : (disabledHolidays.includes(h.id) ? 'Enable' : 'Disable')}
+                                        </button>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Modal */}
-            {manualFormOpen && (
-                <div className={styles.overlay} onClick={() => setManualFormOpen(false)}>
-                    <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                            <h3 className={styles.modalTitle} style={{ margin: 0 }}>
-                                {editingId ? 'Edit Session' : (manualFormMode === 'session' ? 'Add Work Session' : 'Add Extra Break')}
-                            </h3>
-                            {!editingId && (
-                                <div className={styles.modeToggle}>
-                                    <button className={`${styles.modeBtn} ${manualFormMode === 'session' ? styles.active : ''}`} onClick={() => setManualFormMode('session')}>Work</button>
-                                    <button className={`${styles.modeBtn} ${manualFormMode === 'break' ? styles.active : ''}`} onClick={() => setManualFormMode('break')}>Break</button>
-                                </div>
-                            )}
-                        </div>
-
-                        <div className={styles.formGroup}>
-                            <label className={styles.label}>Date</label>
-                            <input type="date" className={styles.input} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
-                        </div>
-
-                        {manualFormMode === 'session' ? (
-                            <>
-                                <div className={styles.controlGrid}>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label}>Start Time</label>
-                                        <input type="time" className={styles.input} value={formData.start} onChange={e => setFormData({ ...formData, start: e.target.value })} />
+                {/* Modal */}
+                {manualFormOpen && (
+                    <div className={styles.overlay} onClick={() => setManualFormOpen(false)}>
+                        <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                                <h3 className={styles.modalTitle} style={{ margin: 0 }}>
+                                    {editingId ? 'Edit Session' : (manualFormMode === 'session' ? 'Add Work Session' : 'Add Extra Break')}
+                                </h3>
+                                {!editingId && (
+                                    <div className={styles.modeToggle}>
+                                        <button className={`${styles.modeBtn} ${manualFormMode === 'session' ? styles.active : ''}`} onClick={() => setManualFormMode('session')}>Work</button>
+                                        <button className={`${styles.modeBtn} ${manualFormMode === 'break' ? styles.active : ''}`} onClick={() => setManualFormMode('break')}>Break</button>
                                     </div>
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label}>End Time</label>
-                                        <input type="time" className={styles.input} value={formData.end} onChange={e => setFormData({ ...formData, end: e.target.value })} />
-                                    </div>
-                                </div>
+                                )}
+                            </div>
 
-                                <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-                                        <label className={styles.label} style={{ margin: 0 }}>Breaks within this session</label>
-                                        <button className={`${styles.button} ${styles.btnSecondary}`} style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
-                                            onClick={() => setFormData({ ...formData, breaks: [...formData.breaks, { id: generateId(), start: formData.start, end: formData.start, type: 'short' }] })}>
-                                            + Add Break
-                                        </button>
+                            <div className={styles.formGroup}>
+                                <label className={styles.label}>Date</label>
+                                <input type="date" className={styles.input} value={formData.date} onChange={e => setFormData({ ...formData, date: e.target.value })} />
+                            </div>
+
+                            {manualFormMode === 'session' ? (
+                                <>
+                                    <div className={styles.controlGrid}>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label}>Start Time</label>
+                                            <input type="time" className={styles.input} value={formData.start} onChange={e => setFormData({ ...formData, start: e.target.value })} />
+                                        </div>
+                                        <div className={styles.formGroup}>
+                                            <label className={styles.label}>End Time</label>
+                                            <input type="time" className={styles.input} value={formData.end} onChange={e => setFormData({ ...formData, end: e.target.value })} />
+                                        </div>
+                                    </div>
+
+                                    <div style={{ marginTop: '1.5rem', borderTop: '1px solid var(--border)', paddingTop: '1rem' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                                            <label className={styles.label} style={{ margin: 0 }}>Breaks within this session</label>
+                                            <button className={`${styles.button} ${styles.btnSecondary}`} style={{ fontSize: '0.75rem', padding: '0.3rem 0.6rem' }}
+                                                onClick={() => setFormData({ ...formData, breaks: [...formData.breaks, { id: generateId(), start: formData.start, end: formData.start, type: 'short' }] })}>
+                                                + Add Break
+                                            </button>
+                                        </div>
+                                        {formData.breaks.map((b) => (
+                                            <div key={b.id} className={styles.breakRow}>
+                                                <select className={styles.input} style={{ width: '85px' }} value={b.type} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, type: e.target.value as BreakType } : item) })}>
+                                                    <option value="short">☕ Short</option>
+                                                    <option value="lunch">🍱 Lunch</option>
+                                                </select>
+                                                <input type="time" className={styles.input} value={b.start} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, start: e.target.value } : item) })} />
+                                                <span>to</span>
+                                                <input type="time" className={styles.input} value={b.end} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, end: e.target.value } : item) })} />
+                                                <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => setFormData({ ...formData, breaks: formData.breaks.filter(item => item.id !== b.id) })}>✕</button>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </>
+                            ) : (
+                                <div style={{ marginTop: '1rem' }}>
+                                    <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
+                                        Add a break period directly to your history.
                                     </div>
                                     {formData.breaks.map((b) => (
                                         <div key={b.id} className={styles.breakRow}>
@@ -1671,42 +1724,23 @@ export default function WorkTimer() {
                                             <input type="time" className={styles.input} value={b.start} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, start: e.target.value } : item) })} />
                                             <span>to</span>
                                             <input type="time" className={styles.input} value={b.end} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, end: e.target.value } : item) })} />
-                                            <button className={`${styles.btnIcon} ${styles.btnIconDestructive}`} onClick={() => setFormData({ ...formData, breaks: formData.breaks.filter(item => item.id !== b.id) })}>✕</button>
                                         </div>
                                     ))}
+                                    {allHistoricalSessions.filter(s => s.date === formData.date).length > 0 && (
+                                        <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--success-text)', background: 'var(--success-bg)', padding: '0.5rem', borderRadius: '4px' }}>
+                                            ✓ This break will be attached to an existing session on this day.
+                                        </div>
+                                    )}
                                 </div>
-                            </>
-                        ) : (
-                            <div style={{ marginTop: '1rem' }}>
-                                <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem' }}>
-                                    Add a break period directly to your history.
-                                </div>
-                                {formData.breaks.map((b) => (
-                                    <div key={b.id} className={styles.breakRow}>
-                                        <select className={styles.input} style={{ width: '85px' }} value={b.type} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, type: e.target.value as BreakType } : item) })}>
-                                            <option value="short">☕ Short</option>
-                                            <option value="lunch">🍱 Lunch</option>
-                                        </select>
-                                        <input type="time" className={styles.input} value={b.start} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, start: e.target.value } : item) })} />
-                                        <span>to</span>
-                                        <input type="time" className={styles.input} value={b.end} onChange={e => setFormData({ ...formData, breaks: formData.breaks.map(item => item.id === b.id ? { ...item, end: e.target.value } : item) })} />
-                                    </div>
-                                ))}
-                                {allHistoricalSessions.filter(s => s.date === formData.date).length > 0 && (
-                                    <div style={{ marginTop: '1rem', fontSize: '0.75rem', color: 'var(--success-text)', background: 'var(--success-bg)', padding: '0.5rem', borderRadius: '4px' }}>
-                                        ✓ This break will be attached to an existing session on this day.
-                                    </div>
-                                )}
+                            )}
+                            <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
+                                <button className={`${styles.button} ${styles.btnSecondary}`} onClick={() => setManualFormOpen(false)}>Cancel</button>
+                                <button className={`${styles.button} ${styles.btnPrimary}`} onClick={handleSaveManual}>Save</button>
                             </div>
-                        )}
-
-                        <div style={{ marginTop: '2rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-                            <button className={`${styles.button} ${styles.btnSecondary}`} onClick={() => setManualFormOpen(false)}>Cancel</button>
-                            <button className={`${styles.button} ${styles.btnPrimary}`} onClick={handleSaveManual}>Save</button>
                         </div>
                     </div>
-                </div>
-            )}
+                )}
+            </div>
         </div>
     );
 }

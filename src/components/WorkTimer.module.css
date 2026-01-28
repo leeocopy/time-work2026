@@ -912,3 +912,58 @@
         grid-template-columns: 1fr;
     }
 }
+.balanceBadge {
+    position: absolute;
+    bottom: 0.5rem;
+    right: 0.5rem;
+    padding: 0.2rem 0.6rem;
+    border-radius: 20px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    font-family: 'Titan One', cursive;
+    z-index: 2;
+}
+
+.balanceBadge.pos {
+    background: rgba(34, 197, 94, 0.1);
+    color: var(--success-text);
+}
+
+.balanceBadge.neg {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--danger-text);
+}
+
+.balanceInfoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.metaInfoGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.metaItem {
+    background: var(--neutral-bg);
+    padding: 0.75rem;
+    border-radius: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+}
+
+.metaLabel {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+.metaValue {
+    font-size: 1rem;
+    font-weight: 700;
+}
