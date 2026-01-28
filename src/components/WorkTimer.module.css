@@ -1,0 +1,825 @@
+/* Dashboard Layout */
+.dashboard {
+    width: 100%;
+    max-width: 1300px;
+    margin: 0 auto;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+    font-family: var(--font-sans);
+    min-height: 100vh;
+}
+
+/* Header */
+.topBar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--card-bg);
+    backdrop-filter: blur(20px);
+    border-radius: var(--radius);
+    border: 1px solid var(--card-border);
+}
+
+.appTitle {
+    font-size: 1.5rem;
+    color: var(--foreground);
+    display: flex;
+    align-items: center;
+    font-family: 'Titan One', cursive;
+    gap: 0.75rem;
+    letter-spacing: 0.02em;
+}
+
+.userActions {
+    display: flex;
+    gap: 0.75rem;
+}
+
+/* Main Layout Grid */
+.mainGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1.25rem;
+    align-items: start;
+}
+
+@media (min-width: 1280px) {
+    .mainGrid {
+        grid-template-columns: 300px 1fr 300px;
+    }
+}
+
+.column {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+/* Cards */
+.card {
+    background: var(--card-bg);
+    backdrop-filter: blur(24px);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    box-shadow: var(--shadow), 0 0 20px rgba(99, 102, 241, 0.05);
+    border: 1px solid var(--card-border);
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    height: auto;
+    transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), background 0.3s ease;
+}
+
+.card:hover {
+    background: var(--card-hover-bg);
+    border-color: var(--card-hover-border);
+    box-shadow: var(--shadow), 0 0 30px rgba(99, 102, 241, 0.15);
+    transform: translateY(-2px);
+}
+
+.cardTitle {
+    font-size: 1.1rem;
+    font-family: 'Titan One', cursive;
+    color: var(--primary);
+    margin-bottom: 1.5rem;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+}
+
+/* Time Tracker Section */
+.timerSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    width: 100%;
+    padding: 0.5rem 0;
+}
+
+.timerDisplay {
+    font-size: 2.25rem;
+    /* text-3xl approx */
+    font-family: 'Titan One', cursive;
+    color: var(--foreground);
+    margin: 1.5rem 0;
+    line-height: 1;
+    font-variant-numeric: tabular-nums;
+    width: 100%;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.05em;
+    transition: font-size 0.3s ease;
+}
+
+@media (min-width: 768px) {
+    .timerDisplay {
+        font-size: 2.75rem;
+        /* text-4xl approx */
+    }
+}
+
+@media (min-width: 1024px) {
+    .timerDisplay {
+        font-size: 3.25rem;
+        /* text-5xl approx */
+    }
+}
+
+/* Status Indicators */
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.4rem 1.2rem;
+    border-radius: 99px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    font-family: var(--font-sans);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.statusWorking {
+    background: var(--primary-light);
+    color: var(--primary);
+    border: 1px solid var(--primary-light);
+}
+
+.statusBreak {
+    background: var(--warning-bg);
+    color: var(--warning-text);
+    border: 1px solid var(--warning-bg);
+}
+
+.statusIdle {
+    background: var(--neutral-bg);
+    color: var(--text-muted);
+}
+
+/* Controls */
+.controls {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    gap: 0.75rem;
+}
+
+.button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.8rem 1.5rem;
+    border-radius: 99px;
+    /* Pill shape */
+    font-weight: 700;
+    font-size: 0.85rem;
+    transition: all 0.2s;
+    border: 1px solid transparent;
+    cursor: pointer;
+    font-family: var(--font-sans);
+}
+
+.button:active {
+    transform: scale(0.96);
+}
+
+.btnPrimary {
+    background: linear-gradient(135deg, #6366f1, #a855f7);
+    color: white;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.3);
+    border: none;
+}
+
+.btnPrimary:hover {
+    filter: brightness(1.1);
+    box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+    transform: translateY(-1px);
+}
+
+.btnSecondary {
+    background: rgba(255, 255, 255, 0.05);
+    color: var(--foreground);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btnSecondary:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.controlGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.75rem;
+}
+
+/* Today Progress */
+.todayProgressGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+.progressContainer {
+    display: flex;
+    justify-content: center;
+    padding: 0.5rem 0;
+}
+
+.progressRing {
+    position: relative;
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.5s ease;
+}
+
+.donutHole {
+    background: #1e293b;
+    /* Matches card bg */
+    border-radius: 50%;
+    width: 82%;
+    height: 82%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+}
+
+.todayStatsGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+.statCard {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.statLabel {
+    color: var(--text-muted);
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.statValue {
+    font-size: 1.25rem;
+    font-family: 'Titan One', cursive;
+    color: var(--foreground);
+}
+
+/* Balance Cards */
+.balanceOverview {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.balanceCardBig {
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: var(--radius-sm);
+    padding: 1.25rem;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    color: var(--foreground);
+    transition: all 0.3s ease;
+}
+
+.balanceCardBig .label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.balanceCardBig .value {
+    font-size: 2rem;
+    font-family: 'Titan One', cursive;
+}
+
+/* Analytics */
+.kpiGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.25rem;
+}
+
+.kpiCard {
+    background: rgba(255, 255, 255, 0.02);
+    padding: 0.75rem;
+    border-radius: var(--radius-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    border: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.kpiLabel {
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.kpiValue {
+    font-size: 1rem;
+    font-family: 'Titan One', cursive;
+    color: var(--foreground);
+}
+
+.chartContainer {
+    height: 140px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 6px;
+    padding: 0 0.5rem 1rem;
+}
+
+.chartColumn {
+    flex: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    position: relative;
+}
+
+.chartBarBg {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: flex-end;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 4px;
+}
+
+.chartBarFill {
+    width: 100%;
+    background: var(--primary);
+    border-radius: 4px;
+    opacity: 0.4;
+    transition: all 0.3s;
+    position: relative;
+    box-shadow: 0 0 10px var(--primary-glow);
+}
+
+.chartBarFill:hover {
+    opacity: 0.8;
+    transform: scaleX(1.1);
+}
+
+.chartBarFill.today {
+    opacity: 1;
+    background: linear-gradient(to top, var(--primary), #a5b4fc);
+}
+
+.chartLabel {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+    margin-top: 0.5rem;
+    text-align: center;
+    font-weight: 700;
+}
+
+/* Logged Entries */
+.entriesList {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.entriesHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+}
+
+.dateGroup {
+    background: rgba(255, 255, 255, 0.01);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    overflow: hidden;
+}
+
+.dateHeader {
+    padding: 0.6rem 1rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+    background: rgba(255, 255, 255, 0.02);
+    text-transform: uppercase;
+}
+
+.entryItem {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.02);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.entryItem:last-child {
+    border-bottom: none;
+}
+
+.entryTime {
+    font-size: 0.9rem;
+    font-weight: 700;
+    color: var(--foreground);
+    font-family: 'Titan One', cursive;
+}
+
+.entryMeta {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    display: flex;
+    gap: 0.5rem;
+}
+
+.entryActions {
+    opacity: 0.3;
+    transition: opacity 0.2s;
+}
+
+.entryItem:hover .entryActions {
+    opacity: 1;
+}
+
+.btnIcon {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.9rem;
+    padding: 0.2rem;
+    color: var(--text-muted);
+    transition: 0.2s;
+}
+
+.btnIcon:hover {
+    color: var(--foreground);
+    transform: scale(1.1);
+}
+
+.btnIconDestructive:hover {
+    color: var(--danger);
+    filter: drop-shadow(0 0 5px var(--danger-glow));
+}
+
+/* Weather & Prayer (Left Column) */
+.weatherContainer {
+    background: var(--neutral-bg);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    text-align: center;
+    border: 1px solid var(--border);
+}
+
+.weatherTemp {
+    font-size: 3rem;
+    font-family: 'Titan One', cursive;
+    color: var(--foreground);
+    margin: 0.25rem 0;
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.weatherDetail {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.prayerList {
+    display: flex;
+    flex-direction: column;
+}
+
+.prayerRow {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.6rem 0;
+    font-size: 0.85rem;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+    color: var(--text-muted);
+}
+
+.prayerRow:last-child {
+    border-bottom: none;
+}
+
+.prayerRow.next {
+    color: var(--primary);
+    font-weight: 700;
+}
+
+.duaContainer {
+    background: var(--success-bg);
+    padding: 1rem;
+    border-radius: var(--radius-sm);
+    text-align: center;
+    border: 1px solid rgba(52, 211, 153, 0.1);
+    margin-top: 1rem;
+}
+
+.duaArabic {
+    font-family: 'Amiri', serif;
+    font-size: 1.25rem;
+    color: var(--success-text);
+    margin-bottom: 0.25rem;
+}
+
+.duaTranslate {
+    font-size: 0.7rem;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+/* Calendar (Right Column) */
+.calendarGrid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+    margin-top: 1rem;
+}
+
+.calendarHeader {
+    text-align: center;
+    font-size: 0.6rem;
+    color: var(--text-muted);
+    font-weight: 600;
+    padding-bottom: 0.2rem;
+}
+
+.calendarDay {
+    aspect-ratio: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 8px;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    cursor: default;
+    background: rgba(255, 255, 255, 0.02);
+    border: 1px solid transparent;
+}
+
+.calendarDay.today {
+    background: var(--primary);
+    color: white;
+    font-weight: 700;
+    box-shadow: 0 4px 10px var(--primary-glow);
+}
+
+.calendarDay.holiday {
+    border: 1px solid var(--warning);
+    color: var(--warning-text);
+    background: var(--warning-bg);
+}
+
+.holidayList {
+    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.holidayItem {
+    font-size: 0.75rem;
+    display: flex;
+    justify-content: space-between;
+    padding: 0.4rem;
+    background: var(--neutral-bg);
+    border-radius: 4px;
+    border: 1px solid var(--border);
+}
+
+/* Modal */
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(10px);
+}
+
+.modal {
+    background: #1e293b;
+    width: 90%;
+    max-width: 440px;
+    padding: 2.5rem;
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--card-border);
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+.modalTitle {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    font-family: 'Titan One', cursive;
+    color: var(--primary);
+}
+
+.input {
+    width: 100%;
+    padding: 0.8rem 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    font-size: 0.85rem;
+    background: rgba(255, 255, 255, 0.03);
+    color: var(--foreground);
+    margin-top: 0.2rem;
+    font-family: var(--font-sans);
+}
+
+.input:focus {
+    border-color: var(--primary);
+    outline: none;
+    box-shadow: 0 0 0 4px var(--primary-light);
+}
+
+.label {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    display: block;
+    margin-bottom: 0.4rem;
+    text-transform: uppercase;
+}
+
+.formGroup {
+    margin-bottom: 0.75rem;
+}
+
+.loaderText {
+    font-family: 'Titan One', cursive;
+    color: var(--primary);
+    font-size: 0.9rem;
+    padding: 3rem;
+    text-align: center;
+    width: 100%;
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* Prayer Countdown Custom Styles */
+.countdownContainer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 1rem;
+    background: var(--primary-light);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--primary);
+    margin-bottom: 1rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.countdownContainer::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, var(--primary-glow) 0%, transparent 70%);
+    opacity: 0.1;
+    pointer-events: none;
+}
+
+.kdIcon {
+    position: absolute;
+    top: 5px;
+    right: 10px;
+    font-size: 0.6rem;
+    color: var(--primary);
+    opacity: 0.5;
+}
+
+.countdownTime {
+    font-size: 1.5rem;
+    font-weight: 700;
+    font-family: 'Titan One', cursive;
+    color: var(--foreground);
+    text-shadow: 0 0 10px var(--primary-glow);
+}
+
+/* Chart Tooltip */
+.chartWrapper {
+    position: relative;
+}
+
+.chartTooltip {
+    position: absolute;
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%) translateY(-5px);
+    background: #000;
+    color: #fff;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.6rem;
+    white-space: nowrap;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.2s;
+    border: 1px solid var(--primary);
+    box-shadow: 0 0 10px var(--primary-glow);
+    z-index: 10;
+}
+
+.chartColumn:hover .chartTooltip {
+    opacity: 1;
+    transform: translateX(-50%) translateY(-10px);
+}
+
+/* Badges / Achievements */
+.badgesGrid {
+    display: flex;
+    justify-content: space-around;
+    padding: 0.5rem;
+}
+
+.badge {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.25rem;
+    opacity: 0.2;
+    filter: grayscale(1);
+    transition: all 0.3s;
+}
+
+.badge.unlocked {
+    opacity: 1;
+    filter: grayscale(0);
+    text-shadow: 0 0 10px rgba(255, 255, 255, 0.2);
+}
+
+.badgeLabel {
+    font-size: 0.6rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    text-transform: uppercase;
+}
+
+/* Holiday Item refinement */
+.holidayDate {
+    font-weight: 700;
+    color: var(--primary);
+}
+
+.holidayName {
+    color: var(--foreground);
+}
+
+.holidayItem.disabled {
+    opacity: 0.5;
+    background: transparent;
+    border-style: dashed;
+}
+
+/* Form refinement */
+.breakRow {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+@media (max-width: 768px) {
+    .mainGrid {
+        grid-template-columns: 1fr;
+    }
+}
