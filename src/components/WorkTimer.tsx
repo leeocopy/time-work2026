@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import { supabase } from '@/lib/supabase';
+import { useRouter } from 'next/navigation';
 import styles from './WorkTimer.module.css';
 
 // --- Constants & Config ---
@@ -184,6 +186,8 @@ const generateId = () => {
 };
 
 export default function WorkTimer() {
+    const router = useRouter();
+    const [user, setUser] = useState<any>(null);
     // --- State ---
     const [state, setState] = useState<TimerState>('IDLE');
     const [session, setSession] = useState<Session | null>(null);
@@ -381,7 +385,13 @@ export default function WorkTimer() {
         return () => clearInterval(interval);
     }, []);
 
-    const loadData = () => {
+    const loadData = async () => {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+            setUser(session.user);
+            // We will fetch from Supabase here later
+        }
+
         const savedState = localStorage.getItem('workTimer_state');
         if (savedState) setState(savedState as TimerState);
 
@@ -901,7 +911,20 @@ export default function WorkTimer() {
                     <span>⏱️</span> Work Hours Calculator
                 </div>
                 <div className={styles.userActions}>
-                    {/* User actions if needed */}
+                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                        {user?.email}
+                    </span>
+                    <button
+                        className={styles.btnSecondary}
+                        style={{ padding: '0.4rem 0.8rem', fontSize: '0.8rem' }}
+                        onClick={async () => {
+                            await supabase.auth.signOut();
+                            router.push('/login');
+                        }}
+                    >
+                        Sign Out
+                    </button>
+                    <button className={styles.btnSecondary} style={{ padding: '0.4rem 0.6rem' }}>⚙️</button>
                 </div>
             </header>
 
