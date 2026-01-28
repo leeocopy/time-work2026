@@ -683,36 +683,46 @@ export default function WorkTimer() {
         };
     }, [allHistoricalSessions, session, todayDateKey, now, closedDays, isDateHoliday, getHolidayDetails]);
 
-    const historicalCalculations = useMemo(() => {
-        // CarryOverBeforeToday = sum(dailyBalance for all days before today)
-        const otherDays = Array.from(new Set([
-            ...allHistoricalSessions.filter(s => s.date < todayDateKey).map(s => s.date),
-            ...closedDays.filter(d => d < todayDateKey)
-        ])).sort();
+    const monthlyBalanceCalculations = useMemo(() => {
+        // We focus on the current month's balance (from 1st of month until today)
+        const currentMonthPrefix = todayDateKey.slice(0, 7);
 
-        let carryOverMin = 0;
-        otherDays.forEach(date => {
-            const dayWorked = dailyWorkedMinutes(allHistoricalSessions.filter(s => s.date === date), 0);
-            const isHol = isDateHoliday(date);
-            const dayReq = getRequiredMinutesForDate(date, isHol);
-            // Only add to balance if:
-            // 1. It's a standard workday and missed (dayReq > 0)
-            // 2. OR it was a day with activity (dayWorked > 0) and we want to count positive balance
+        // Find all days in the current month up to today
+        const [y, m] = currentMonthPrefix.split('-').map(Number);
+        const todayDayNum = parseInt(todayDateKey.split('-')[2]);
 
-            // Logic check:
-            // If Holiday: Req=0. If worked 0, Bal=0. If worked 120, Bal=+120.
-            // If Workday: Req=510. If worked 0, Bal=-510.
-            carryOverMin += (dayWorked - dayReq);
-        });
+        let monthlyCarryOver = 0; // Balance from 1st of month until yesterday
+        let monthToDateRequired = 0;
+        let monthToDateWorked = 0;
 
-        // Total Cumulative Balance (All-time)
-        const allHistoricalBalance = carryOverMin + todayCalculations.realTodayBalance;
+        for (let d = 1; d < todayDayNum; d++) {
+            const dateC = `${y}-${String(m).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+            const isHol = isDateHoliday(dateC);
+            const dayReq = getRequiredMinutesForDate(dateC, isHol);
+            const dayWorked = dailyWorkedMinutes(allHistoricalSessions.filter(s => s.date === dateC), 0);
 
-        // Total Balance (Display) - uses the "UX-smoothed" today balance
-        const totalDisplayBalance = carryOverMin + todayCalculations.displayTodayBalance;
+            monthlyCarryOver += (dayWorked - dayReq);
+            monthToDateRequired += dayReq;
+            monthToDateWorked += dayWorked;
+        }
 
-        return { carryOverMin, allHistoricalBalance, totalDisplayBalance };
-    }, [allHistoricalSessions, closedDays, todayDateKey, todayCalculations.realTodayBalance, todayCalculations.displayTodayBalance, isDateHoliday]);
+        // Monthly Total including today's current progress
+        const monthlyTotalWorked = monthToDateWorked + todayCalculations.workedToday;
+        const monthlyTotalRequired = monthToDateRequired + todayCalculations.requiredToday;
+        const currentMonthlyBalance = monthlyTotalWorked - monthlyTotalRequired;
+
+        return {
+            monthlyCarryOver,
+            monthlyTotalWorked,
+            monthlyTotalRequired,
+            currentMonthlyBalance
+        };
+    }, [allHistoricalSessions, todayDateKey, todayCalculations.workedToday, todayCalculations.requiredToday, isDateHoliday]);
+
+    // Keep historicalCalculations for all-time stats if needed, or just alias it
+    const historicalCalculations = {
+        carryOverMin: monthlyBalanceCalculations.monthlyCarryOver
+    };
 
     const monthStats = useMemo(() => {
         const monthPrefix = selectedMonth;
@@ -1328,6 +1338,11 @@ export default function WorkTimer() {
                                     <span className={styles.statValue} style={{ color: 'var(--success-text)' }}>
                                         {minutesToHHMM(todayCalculations.workedToday).slice(1)}
                                     </span>
+                                    <span style={{ fontSize: '0.65rem', color: monthlyBalanceCalculations.currentMonthlyBalance >= 0 ? 'var(--success-text)' : 'var(--danger-text)', marginTop: '0.2rem', textAlign: 'center' }}>
+                                        {monthlyBalanceCalculations.currentMonthlyBalance >= 0 ?
+                                            `Month: +${minutesToHHMM(monthlyBalanceCalculations.currentMonthlyBalance).slice(1)} saved` :
+                                            `Month: ${minutesToHHMM(monthlyBalanceCalculations.currentMonthlyBalance)} missing`}
+                                    </span>
                                 </div>
                                 <div className={styles.statCard}>
                                     <span className={styles.statLabel}>Total Break</span>
@@ -1336,13 +1351,13 @@ export default function WorkTimer() {
                                     </span>
                                 </div>
                                 <div className={styles.statCard}>
-                                    <span className={styles.statLabel}>Est. Finish</span>
+                                    <span className={styles.statLabel}>Est. Finish (Goal)</span>
                                     <span className={styles.statValue}>
                                         {(() => {
                                             if (todayCalculations.requiredToday === 0) return 'Holiday';
                                             if (!session) return '--:--';
-                                            // Adjusted Goal = requiredToday - historicalCalculations.carryOverMin
-                                            const adjGoalMs = (todayCalculations.requiredToday - historicalCalculations.carryOverMin) * 60000;
+                                            // Adjusted Goal = requiredToday - monthlyBalanceCalculations.monthlyCarryOver
+                                            const adjGoalMs = (todayCalculations.requiredToday - monthlyBalanceCalculations.monthlyCarryOver) * 60000;
                                             const workedMs = todayCalculations.workedToday * 60000;
                                             const remaining = adjGoalMs - workedMs;
                                             if (remaining <= 0) return 'Now';
@@ -1357,14 +1372,14 @@ export default function WorkTimer() {
                                     <span className={styles.statLabel}>Target Goal (Adj)</span>
                                     <span className={styles.statValue} style={{ color: 'var(--primary)' }}>
                                         {(() => {
-                                            const adj = todayCalculations.requiredToday - historicalCalculations.carryOverMin;
+                                            const adj = todayCalculations.requiredToday - monthlyBalanceCalculations.monthlyCarryOver;
                                             return `${Math.floor(adj / 60)}h${String(Math.abs(adj % 60)).padStart(2, '0')}m`;
                                         })()}
                                     </span>
                                     <span style={{ fontSize: '0.65rem', color: 'var(--text-muted)', marginTop: '0.2rem', textAlign: 'center' }}>
-                                        {historicalCalculations.carryOverMin >= 0 ?
-                                            `Saved: ${minutesToHHMM(historicalCalculations.carryOverMin).slice(1)}` :
-                                            `Debt: ${minutesToHHMM(historicalCalculations.carryOverMin).slice(1)}`}
+                                        {monthlyBalanceCalculations.monthlyCarryOver >= 0 ?
+                                            `Month Saved: +${minutesToHHMM(monthlyBalanceCalculations.monthlyCarryOver).slice(1)}` :
+                                            `Month Debt: ${minutesToHHMM(monthlyBalanceCalculations.monthlyCarryOver)}`}
                                     </span>
                                 </div>
                             </div>
