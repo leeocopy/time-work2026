@@ -11,9 +11,12 @@ interface ProgressCardProps {
 
 export default function ProgressCard({ entries }: ProgressCardProps) {
     const [mounted, setMounted] = useState(false);
+    const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {
         setMounted(true);
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+        return () => clearInterval(timer);
     }, []);
 
     const stats = useMemo(() => {
@@ -36,10 +39,10 @@ export default function ProgressCard({ entries }: ProgressCardProps) {
             const next = todayEntries[i + 1];
 
             if (current.type === 'CHECK_IN') {
-                const endTime = next ? new Date(next.timestamp) : new Date();
+                const endTime = next ? new Date(next.timestamp) : currentTime;
                 workedMinutes += differenceInMinutes(endTime, new Date(current.timestamp));
             } else if (current.type === 'CHECK_OUT' && current.reason !== 'End of day') {
-                const endTime = next ? new Date(next.timestamp) : new Date();
+                const endTime = next ? new Date(next.timestamp) : currentTime;
                 breakMinutes += differenceInMinutes(endTime, new Date(current.timestamp));
             }
         }
@@ -52,7 +55,7 @@ export default function ProgressCard({ entries }: ProgressCardProps) {
             remaining: remainingMinutes,
             pct: Math.min(100, (workedMinutes / goalMinutes) * 100).toFixed(1)
         };
-    }, [entries]);
+    }, [entries, mounted, currentTime]);
 
     const data = [
         { name: 'Worked', value: stats.worked, color: '#4f46e5' },

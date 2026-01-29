@@ -26,25 +26,41 @@ const PUBLIC_HOLIDAYS_2026 = [
 
 export default function BalanceCard({ entries }: BalanceCardProps) {
     const [currentTime, setCurrentTime] = useState(new Date());
+    const [customHolidays, setCustomHolidays] = useState<string[]>([]);
 
     useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 10000); // Update every 10s for live feel
+        const timer = setInterval(() => setCurrentTime(new Date()), 1000); // Live updates
+
+        // Load custom holidays
+        const saved = localStorage.getItem('custom_holidays');
+        if (saved) {
+            try {
+                const parsed = JSON.parse(saved);
+                setCustomHolidays(parsed.map((h: any) => h.date));
+            } catch (e) {
+                console.error("Failed to parse holidays", e);
+            }
+        }
+
         return () => clearInterval(timer);
     }, []);
 
     const getRequiredHoursForDay = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
-        if (isWeekend(date) || PUBLIC_HOLIDAYS_2026.includes(dateStr)) return 0;
+        // Check if weekend or Public holiday or Custom Leave/Holiday
+        if (isWeekend(date) || PUBLIC_HOLIDAYS_2026.includes(dateStr) || customHolidays.includes(dateStr)) {
+            return 0;
+        }
         const day = date.getDay(); // 0 is Sunday, 5 is Friday
         return day === 5 ? 7.5 : 8.5;
     };
 
-    const { dailyPerformance, cumulativeBalance, todayGoal } = useMemo(() => {
+    const { dailyBalance, monthlyBalance } = useMemo(() => {
         const today = new Date();
         const todayStr = format(today, 'yyyy-MM-dd');
         const requiredHoursToday = getRequiredHoursForDay(today);
 
-        // --- 1. Today's Performance Calculation ---
+        // --- 1. Daily Balance ---
         const todayEntries = entries
             .filter((e) => format(new Date(e.timestamp), 'yyyy-MM-dd') === todayStr)
             .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
@@ -67,9 +83,9 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         }
 
         const dailyHours = totalWorkMillis / (1000 * 60 * 60);
-        const dailyPerf = dailyHours - requiredHoursToday;
+        const dailyBal = dailyHours - requiredHoursToday;
 
-        // --- 2. Previous Days Balance (Carry-over) ---
+        // --- 2. Monthly Cumulative Balance ---
         const monthStart = startOfMonth(today);
         const yesterday = endOfYesterday();
         let carryOverBalance = 0;
@@ -104,15 +120,11 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
             }
         }
 
-        // Today's Total Goal = Required Today - CarryOver (if carryOver is -1h, we need +1h more, so 8.5 - (-1) = 9.5)
-        const adjustedGoal = requiredHoursToday - carryOverBalance;
-
         return {
-            dailyPerformance: dailyPerf,
-            cumulativeBalance: carryOverBalance + dailyPerf,
-            todayGoal: adjustedGoal > 0 ? adjustedGoal : 0
+            dailyBalance: dailyBal,
+            monthlyBalance: carryOverBalance + dailyBal
         };
-    }, [entries, currentTime]);
+    }, [entries, currentTime, customHolidays]);
 
     const formatBalance = (balance: number) => {
         const isNegative = balance < 0;
@@ -125,15 +137,8 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         };
     };
 
-    const formatHoursOnly = (hours: number) => {
-        const mins = Math.round(hours * 60);
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return `${h}h ${m}m`;
-    };
-
-    const perf = formatBalance(dailyPerformance);
-    const cumulative = formatBalance(cumulativeBalance);
+    const daily = formatBalance(dailyBalance);
+    const monthly = formatBalance(monthlyBalance);
 
     return (
         <div className="bg-white dark:bg-zinc-900 px-6 py-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
@@ -142,58 +147,48 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
                     <Calendar className="w-5 h-5 text-indigo-500" />
                     Balance Overview
                 </h3>
-                <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-                    Resets every 1st of {format(new Date(), 'MMMM')}
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium italic">
+                    Your work hours balance.
                 </p>
             </div>
 
             <div className="space-y-4">
-                {/* Today's Goal (Adjusted) */}
-                <div className="p-4 bg-zinc-50 dark:bg-zinc-800/50 rounded-xl border border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-                    <div className="flex flex-col">
-                        <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">Today's Target</span>
-                        <span className="text-xs text-zinc-400 italic">Adjusted by previous days</span>
-                    </div>
-                    <span className="text-sm font-black text-indigo-600 dark:text-indigo-400 font-mono">
-                        {formatHoursOnly(todayGoal)}
+                {/* Daily Balance Card */}
+                <div className={cn(
+                    "p-6 rounded-2xl flex flex-col items-center gap-1 transition-colors",
+                    daily.isNegative
+                        ? "bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40"
+                        : "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40"
+                )}>
+                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">Daily Balance</span>
+                    <span className={cn(
+                        "text-4xl font-extrabold tracking-tighter",
+                        daily.isNegative ? "text-red-500" : "text-emerald-500"
+                    )}>
+                        {daily.text}
                     </span>
                 </div>
 
-                {/* Cumulative Balance Card (The one they care about most) */}
+                {/* Monthly Balance Card */}
                 <div className={cn(
-                    "p-5 rounded-2xl flex flex-col items-center gap-1 transition-colors relative overflow-hidden",
-                    cumulative.isNegative
-                        ? "bg-red-50 dark:bg-red-950/30 border border-red-100 dark:border-red-900/50"
-                        : "bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/50"
+                    "p-6 rounded-2xl flex flex-col items-center gap-1 transition-colors",
+                    monthly.isNegative
+                        ? "bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40"
+                        : "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40"
                 )}>
-                    <div className="absolute top-0 right-0 p-2">
-                        <div className={cn("w-2 h-2 rounded-full animate-pulse", cumulative.isNegative ? "bg-red-500" : "bg-emerald-500")} />
-                    </div>
-                    <span className="text-xs font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">Month Balance</span>
+                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">Monthly Balance</span>
                     <span className={cn(
-                        "text-3xl font-extrabold tracking-tighter",
-                        cumulative.isNegative ? "text-red-600 dark:text-red-400" : "text-emerald-600 dark:text-emerald-400"
+                        "text-4xl font-extrabold tracking-tighter",
+                        monthly.isNegative ? "text-red-500" : "text-emerald-500"
                     )}>
-                        {cumulative.text}
-                    </span>
-                </div>
-
-                {/* Today's Performance */}
-                <div className={cn(
-                    "p-4 rounded-xl flex justify-between items-center",
-                    perf.isNegative
-                        ? "bg-zinc-100/50 dark:bg-zinc-800/30"
-                        : "bg-emerald-50/50 dark:bg-emerald-900/10"
-                )}>
-                    <span className="text-[10px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-tight">Today's Progress</span>
-                    <span className={cn(
-                        "text-sm font-bold",
-                        perf.isNegative ? "text-zinc-600 dark:text-zinc-400" : "text-emerald-600 dark:text-emerald-400"
-                    )}>
-                        {perf.text}
+                        {monthly.text}
                     </span>
                 </div>
             </div>
+
+            <p className="text-[10px] text-center text-zinc-400 uppercase font-black tracking-widest">
+                Resets on the 1st of {format(new Date(), 'MMMM')}
+            </p>
         </div>
     );
 }
