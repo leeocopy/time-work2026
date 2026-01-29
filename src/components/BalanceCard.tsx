@@ -51,8 +51,14 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         if (isWeekend(date) || PUBLIC_HOLIDAYS_2026.includes(dateStr) || customHolidays.includes(dateStr)) {
             return 0;
         }
-        const day = date.getDay(); // 0 is Sunday, 5 is Friday
-        return day === 5 ? 7.5 : 8.5;
+        const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
+        if (dayOfWeek >= 1 && dayOfWeek <= 4) {
+            return 8.5; // Monday to Thursday
+        }
+        if (dayOfWeek === 5) {
+            return 7.5; // Friday
+        }
+        return 0; // Weekend
     };
 
     const { dailyBalance, monthlyBalance } = useMemo(() => {
@@ -60,27 +66,45 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         const todayStr = format(today, 'yyyy-MM-dd');
         const requiredHoursToday = getRequiredHoursForDay(today);
 
-        // --- 1. Daily Balance ---
+        // --- 1. Daily Balance (Matching user's requested logic) ---
         const todayEntries = entries
-            .filter((e) => format(new Date(e.timestamp), 'yyyy-MM-dd') === todayStr)
+            .filter((entry) => format(new Date(entry.timestamp), 'yyyy-MM-dd') === todayStr)
             .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-        let totalWorkMillis = 0;
-        let lastCheckInTime: Date | null = null;
+        let workIntervals: { start: number; end: number }[] = [];
+        let lastCheckIn: number | null = null;
+        let lastCheckOutTime: number | null = null;
+        let totalBreakMillis = 0;
 
         for (const entry of todayEntries) {
-            const entryTime = new Date(entry.timestamp);
+            const entryTime = new Date(entry.timestamp).getTime();
             if (entry.type === 'CHECK_IN') {
-                lastCheckInTime = entryTime;
-            } else if (entry.type === 'CHECK_OUT' && lastCheckInTime) {
-                totalWorkMillis += entryTime.getTime() - lastCheckInTime.getTime();
-                lastCheckInTime = null;
+                if (lastCheckOutTime) {
+                    totalBreakMillis += entryTime - lastCheckOutTime;
+                    lastCheckOutTime = null;
+                }
+                lastCheckIn = entryTime;
+            } else if (entry.type === 'CHECK_OUT' && lastCheckIn) {
+                workIntervals.push({
+                    start: lastCheckIn,
+                    end: entryTime,
+                });
+                lastCheckIn = null;
+                if (entry.reason !== 'End of day') {
+                    lastCheckOutTime = entryTime;
+                }
             }
         }
 
-        if (lastCheckInTime) {
-            totalWorkMillis += currentTime.getTime() - lastCheckInTime.getTime();
+        // If user is currently checked in, calculate work up to now.
+        if (lastCheckIn) {
+            workIntervals.push({ start: lastCheckIn, end: currentTime.getTime() });
         }
+
+        const totalWorkMillis = workIntervals.reduce(
+            (acc, interval) => acc + (interval.end - interval.start),
+            0
+        );
 
         const dailyHours = totalWorkMillis / (1000 * 60 * 60);
         const dailyBal = dailyHours - requiredHoursToday;
@@ -102,20 +126,20 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
                     .filter((e) => format(new Date(e.timestamp), 'yyyy-MM-dd') === dayStr)
                     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-                let dayTotalMillis = 0;
-                let dayLastCheckIn: Date | null = null;
+                let dayWorkMillis = 0;
+                let dayLastCheckIn: number | null = null;
 
                 for (const entry of dayEntries) {
-                    const entryTime = new Date(entry.timestamp);
+                    const entryTime = new Date(entry.timestamp).getTime();
                     if (entry.type === 'CHECK_IN') {
                         dayLastCheckIn = entryTime;
                     } else if (entry.type === 'CHECK_OUT' && dayLastCheckIn) {
-                        dayTotalMillis += entryTime.getTime() - dayLastCheckIn.getTime();
+                        dayWorkMillis += entryTime - dayLastCheckIn;
                         dayLastCheckIn = null;
                     }
                 }
 
-                const dayHours = dayTotalMillis / (1000 * 60 * 60);
+                const dayHours = dayWorkMillis / (1000 * 60 * 60);
                 carryOverBalance += (dayHours - reqHours);
             }
         }
