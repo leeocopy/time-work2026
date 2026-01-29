@@ -59,10 +59,10 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
                         <Calendar className="w-8 h-8" />
-                        HOLIDAYS & LEAVE
+                        CONGÉS & FÉRIÉS
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
-                        Calendar Overview
+                        Aperçu Calendrier
                     </p>
                 </div>
                 <button
@@ -80,14 +80,14 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                             <label className="text-[9px] font-black uppercase text-black/40">Identifier</label>
                             <input
                                 type="text"
-                                placeholder="E.G. SICKNESS"
+                                placeholder="EX: MALADIE, ABSENCE..."
                                 className="w-full bg-white border-2 border-black px-4 py-3 text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase text-black/40">Target Date</label>
+                            <label className="text-[9px] font-black uppercase text-black/40">Date</label>
                             <input
                                 type="date"
                                 className="w-full bg-white border-2 border-black px-4 py-3 text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
@@ -100,7 +100,7 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                         onClick={addHoliday}
                         className="btn-brutalist w-full py-4 bg-black text-white"
                     >
-                        Save Leave
+                        Enregistrer
                     </button>
                 </div>
             )}
@@ -109,14 +109,14 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                 <section>
                     <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <span className="w-2 h-2 bg-brand-blue border-1 border-black" />
-                        Custom Entries
+                        Congés Personnalisés
                     </h4>
                     <div className="space-y-3">
                         {customHolidays.map(h => (
                             <div key={h.id} className="flex justify-between items-center p-4 bg-white border-2 border-black shadow-[4px_4px_0px_#000]">
                                 <div className="flex flex-col">
                                     <span className="text-xs font-black uppercase italic">{h.name}</span>
-                                    <span className="text-[10px] font-black text-black/40 tabular-nums uppercase">{format(new Date(h.date), 'MMM dd, yyyy')}</span>
+                                    <span className="text-[10px] font-black text-black/40 tabular-nums uppercase">{format(new Date(h.date), 'dd MMM yyyy')}</span>
                                 </div>
                                 <button
                                     onClick={() => deleteHoliday(h.id)}
@@ -127,7 +127,7 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                             </div>
                         ))}
                         {customHolidays.length === 0 && (
-                            <p className="text-[10px] font-black text-black/20 uppercase italic py-2">No custom leaves added.</p>
+                            <p className="text-[10px] font-black text-black/20 uppercase italic py-2">Aucun congé ajouté.</p>
                         )}
                     </div>
                 </section>
@@ -135,7 +135,7 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                 <section>
                     <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
                         <span className="w-2 h-2 bg-brand-yellow border-1 border-black" />
-                        Public (2026)
+                        Jours Fériés (2026)
                     </h4>
                     <div className="space-y-2">
                         {PUBLIC_HOLIDAYS_2026.map(h => (

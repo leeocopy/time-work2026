@@ -20,7 +20,7 @@ export default function AyahCard() {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
                         <BookOpen className="w-8 h-8" />
-                        SPIRITUAL BEACON
+                        VERSET DU JOUR
                     </h3>
                 </div>
             </div>
@@ -31,7 +31,7 @@ export default function AyahCard() {
                 </p>
                 <div className="flex items-center gap-3 justify-center">
                     <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime">
-                        Surah {ayah.surah}
+                        Sourate {ayah.surah}
                     </span>
                 </div>
             </div>

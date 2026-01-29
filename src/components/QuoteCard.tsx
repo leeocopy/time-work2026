@@ -20,7 +20,7 @@ export default function QuoteCard() {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
                         <QuoteIcon className="w-8 h-8" />
-                        INTELLECTUAL PULSE
+                        CITATION DU JOUR
                     </h3>
                 </div>
             </div>

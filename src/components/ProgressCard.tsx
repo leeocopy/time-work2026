@@ -5,7 +5,7 @@ import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 import { formatHours } from '@/lib/utils';
 import { cn } from '@/lib/utils';
 import { TimeEntry } from '@/lib/types';
-import { isToday, startOfToday } from 'date-fns';
+import { isToday, startOfToday, format } from 'date-fns';
 
 interface ProgressCardProps {
     entries: TimeEntry[];
@@ -14,36 +14,61 @@ interface ProgressCardProps {
 
 export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
     const calculateStats = () => {
-        const today = startOfToday();
         const todayEntries = entries.filter(e => isToday(new Date(e.timestamp)));
-
-        let worked = 0;
-        let lastIn: Date | null = null;
-
         const sorted = [...todayEntries].sort((a, b) =>
             new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
         );
 
-        sorted.forEach(entry => {
+        let worked = 0;
+        let totalBreak = 0;
+        let lastIn: Date | null = null;
+        let firstIn: Date | null = null;
+
+        sorted.forEach((entry, index) => {
+            const entryDate = new Date(entry.timestamp);
             if (entry.type === 'CHECK_IN') {
-                lastIn = new Date(entry.timestamp);
+                if (!firstIn) firstIn = entryDate;
+                lastIn = entryDate;
+
+                // Calculate break time since last checkout
+                if (index > 0) {
+                    const prevEntry = sorted[index - 1];
+                    if (prevEntry.type === 'CHECK_OUT') {
+                        totalBreak += (entryDate.getTime() - new Date(prevEntry.timestamp).getTime()) / 1000;
+                    }
+                }
             } else if (entry.type === 'CHECK_OUT' && lastIn) {
-                worked += (new Date(entry.timestamp).getTime() - lastIn.getTime()) / 1000;
+                worked += (entryDate.getTime() - lastIn.getTime()) / 1000;
                 lastIn = null;
             }
         });
 
-        // Add live time if currently checked in
+        const now = new Date();
         const lastEntry = sorted[sorted.length - 1];
+
+        // Live updates
         if (lastEntry?.type === 'CHECK_IN') {
-            worked += (new Date().getTime() - new Date(lastEntry.timestamp).getTime()) / 1000;
+            worked += (now.getTime() - new Date(lastEntry.timestamp).getTime()) / 1000;
+        } else if (lastEntry?.type === 'CHECK_OUT' && (lastEntry.reason === 'Short break' || lastEntry.reason === 'Lunch break')) {
+            totalBreak += (now.getTime() - new Date(lastEntry.timestamp).getTime()) / 1000;
         }
 
         const goalSeconds = workGoal * 3600;
         const pct = (worked / goalSeconds) * 100;
+        const dailyBalance = worked - goalSeconds;
+
+        // Leave Time: First Entry + Goal + Total Break
+        let leaveTime: Date | null = null;
+        const firstInDate = firstIn as Date | null;
+        if (firstInDate) {
+            leaveTime = new Date(firstInDate.getTime() + (workGoal * 3600 * 1000) + (totalBreak * 1000));
+        }
 
         return {
             worked,
+            totalBreak,
+            dailyBalance,
+            leaveTime,
             pct: Math.min(Math.round(pct), 100),
             remaining: Math.max(goalSeconds - worked, 0),
             isGoalReached: worked >= goalSeconds
@@ -64,10 +89,10 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
                         <Activity className="w-8 h-8" />
-                        LIVE METRICS
+                        TODAY'S PROGRESS
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-2 py-0.5 inline-block w-fit mt-1">
-                        Node Capacity: {workGoal}H
+                        Node Target: {workGoal}H
                     </p>
                 </div>
                 <div className={cn(
@@ -107,28 +132,43 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
 
                 <div className="flex-1 w-full flex flex-col gap-4">
                     <div className="bg-black text-white p-4 border-2 border-white/20 shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
-                        <div className="flex justify-between items-center">
+                        <div className="grid grid-cols-2 gap-y-4">
                             <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-mint">Engaged</p>
-                                <p className="text-2xl font-black tabular-nums">{formatHours(stats.worked)}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-mint">Total Hours</p>
+                                <p className="text-xl font-black tabular-nums">{formatHours(stats.worked)}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Pending</p>
-                                <p className="text-lg font-black tabular-nums text-white/60">{formatHours(stats.remaining)}</p>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Daily Balance</p>
+                                <p className={cn(
+                                    "text-xl font-black tabular-nums",
+                                    stats.dailyBalance >= 0 ? "text-brand-lime" : "text-brand-orange"
+                                )}>
+                                    {stats.dailyBalance >= 0 ? '+' : ''}{formatHours(stats.dailyBalance)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Total Break</p>
+                                <p className="text-lg font-black tabular-nums text-white/60">{formatHours(stats.totalBreak)}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Leave Time</p>
+                                <p className="text-lg font-black tabular-nums text-white/60">
+                                    {stats.leaveTime ? format(stats.leaveTime, 'HH:mm') : '--:--'}
+                                </p>
                             </div>
                         </div>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                         <div className="bg-white/10 border-2 border-white/10 p-2.5">
-                            <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Sync Status</p>
+                            <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Sync State</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
                                 <div className={cn("w-1.5 h-1.5 rounded-full", stats.isGoalReached ? "bg-brand-lime" : "bg-brand-yellow")} />
-                                <span className="text-[9px] font-black text-white uppercase">{stats.isGoalReached ? 'Max' : 'Active'}</span>
+                                <span className="text-[9px] font-black text-white uppercase">{stats.isGoalReached ? 'Synced' : 'Active'}</span>
                             </div>
                         </div>
                         <div className="bg-white/10 border-2 border-white/10 p-2.5">
-                            <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Ecliptic Flux</p>
+                            <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Flow Type</p>
                             <p className="text-[9px] font-black text-white uppercase mt-0.5">Quantum</p>
                         </div>
                     </div>

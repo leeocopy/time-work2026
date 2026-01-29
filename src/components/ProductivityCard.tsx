@@ -45,10 +45,10 @@ export default function ProductivityCard({ entries }: ProductivityCardProps) {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
                         <BarChart3 className="w-8 h-8" />
-                        PRODUCTIVITY HEATMAP
+                        PRODUCTIVITÉ
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
-                        Last 7 Sessions
+                        7 Dernières Sessions
                     </p>
                 </div>
             </div>
@@ -89,8 +89,8 @@ export default function ProductivityCard({ entries }: ProductivityCardProps) {
                         <Zap className="w-6 h-6 text-brand-yellow" />
                     </div>
                     <div className="flex flex-col">
-                        <p className="text-xs font-black uppercase">Consistency King</p>
-                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">5 day streak</p>
+                        <p className="text-xs font-black uppercase">Roi de la Constance</p>
+                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">Série de 5 jours</p>
                     </div>
                 </div>
                 <div className="flex items-center gap-4 p-4 border-2 border-black bg-brand-blue shadow-[4px_4px_0px_#000]">
@@ -98,8 +98,8 @@ export default function ProductivityCard({ entries }: ProductivityCardProps) {
                         <Trophy className="w-6 h-6 text-brand-blue" />
                     </div>
                     <div className="flex flex-col text-white">
-                        <p className="text-xs font-black uppercase">Deep Work Master</p>
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">42 total hours</p>
+                        <p className="text-xs font-black uppercase">Maître du Travail</p>
+                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">42 heures au total</p>
                     </div>
                 </div>
             </div>

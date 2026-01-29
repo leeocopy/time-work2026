@@ -68,21 +68,21 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
                             value={type}
                             onChange={(e) => setType(e.target.value as any)}
                         >
-                            <option value="CHECK_IN">INFLOW</option>
-                            <option value="CHECK_OUT">OUTFLOW</option>
+                            <option value="CHECK_IN">ARRIVÉE</option>
+                            <option value="CHECK_OUT">DÉPART</option>
                         </select>
                     </div>
                     {type === 'CHECK_OUT' && (
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] block">Condition</label>
+                            <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] block">Motif</label>
                             <select
                                 className="w-full px-5 py-4 bg-slate-50 border-2 border-black outline-none text-xs font-black uppercase transition-all focus:bg-white cursor-pointer"
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                             >
-                                <option value="End of day">EOD</option>
-                                <option value="Lunch break">LUNCH</option>
-                                <option value="Short break">BREAK</option>
+                                <option value="End of day">Fin de journée</option>
+                                <option value="Lunch break">Déjeuner</option>
+                                <option value="Short break">Pause</option>
                             </select>
                         </div>
                     )}
@@ -93,7 +93,7 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
                     disabled={loading}
                     className="btn-brutalist w-full py-5 bg-brand-blue text-white"
                 >
-                    {loading ? 'Processing...' : 'Synchronize Record'}
+                    {loading ? 'Envoi...' : 'ENREGISTRER'}
                 </button>
             </form>
         </div>

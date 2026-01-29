@@ -147,10 +147,10 @@ export default function BalanceCard({ entries, customHolidays, workGoal }: Balan
                             <div className="p-2 bg-black rounded-lg">
                                 <Calendar className="w-4 h-4 text-brand-lime" />
                             </div>
-                            <span className="text-xs font-black text-white uppercase tracking-widest">Cycle Stats</span>
+                            <span className="text-xs font-black text-white uppercase tracking-widest">Stats du Cycle</span>
                         </div>
                         <span className="text-sm font-black text-white tabular-nums">
-                            {stats.workDays} / {stats.totalDays} Days
+                            {stats.workDays} / {stats.totalDays} Jours
                         </span>
                     </div>
                 </div>

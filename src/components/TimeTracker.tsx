@@ -69,10 +69,10 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3">
                         <Clock className="w-8 h-8" />
-                        NODE MATRIX
+                        TIME TRACKER
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
-                        Quantum Flux Sync
+                        Operational Node
                     </p>
                 </div>
                 <div className="btn-brutalist bg-white py-1 px-3">
@@ -91,14 +91,14 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                             className="relative w-48 h-48 rounded-full bg-black text-white border-4 border-white flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[8px_8px_0px_#fff] disabled:opacity-50"
                         >
                             <Play className="w-16 h-16 fill-brand-lime" />
-                            <span className="font-black uppercase tracking-[0.2em] text-[10px]">AUTH ACCESS</span>
+                            <span className="font-black uppercase tracking-[0.2em] text-[10px]">CHECK IN</span>
                         </button>
 
                         {isOnBreak && (
                             <div className="bg-brand-orange border-2 border-black p-3 shadow-[4px_4px_0px_#000] rotate-1 animate-in fade-in slide-in-from-bottom-4 duration-700">
                                 <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
                                     <span className="w-2 h-2 rounded-full bg-black animate-ping" />
-                                    ACTIVE BREAK: {getElapsedTime(lastEntry!.timestamp)}
+                                    BREAK ACTIVE: {getElapsedTime(lastEntry!.timestamp)}
                                 </span>
                             </div>
                         )}
@@ -106,7 +106,7 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                 ) : (
                     <div className="flex flex-col items-center w-full gap-10">
                         <div className="bg-white border-4 border-black p-10 shadow-[10px_10px_0px_#000] w-full text-center -rotate-1">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-2">Pulse Rate</span>
+                            <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-2">Durée Session</span>
                             <span className="text-6xl font-black text-black tracking-tighter tabular-nums">
                                 {getElapsedTime(lastEntry!.timestamp)}
                             </span>
@@ -119,7 +119,7 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                                 className="btn-brutalist bg-black text-white px-10 py-4 text-xs"
                             >
                                 <Square className="w-4 h-4 fill-brand-orange" />
-                                TERMINATE
+                                CHECK OUT
                             </button>
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'Lunch break')}
@@ -127,7 +127,7 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                                 className="btn-brutalist bg-brand-yellow text-black px-8 py-4 text-xs"
                             >
                                 <Utensils className="w-4 h-4" />
-                                REFUEL
+                                LUNCH
                             </button>
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'Short break')}
@@ -135,7 +135,7 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                                 className="btn-brutalist bg-brand-blue text-white px-8 py-4 text-xs"
                             >
                                 <Coffee className="w-4 h-4" />
-                                RECAL
+                                BREAK
                             </button>
                         </div>
                     </div>
@@ -144,7 +144,7 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                 {lastEntry && (
                     <div className="mt-8 bg-black/10 border-t-2 border-black/20 w-full pt-4 flex items-center justify-between">
                         <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
-                            {isWorking ? 'Session Start' : `Last Jump (${lastEntry.reason})`}
+                            {isWorking ? 'Checked in at:' : 'Last Checkout'}
                         </p>
                         <span className="text-xs font-black bg-black text-white px-2 py-0.5">
                             {mounted ? new Date(lastEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}

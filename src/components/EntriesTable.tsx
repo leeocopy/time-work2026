@@ -122,7 +122,10 @@ export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }
                                     </td>
                                     <td className="px-8 py-5">
                                         <span className="text-xs font-black text-black/60 italic">
-                                            {entry.reason || '— STANDARD PROCED'}
+                                            {entry.reason === 'End of day' ? 'Fin de journée' :
+                                                entry.reason === 'Lunch break' ? 'Déjeuner' :
+                                                    entry.reason === 'Short break' ? 'Pause' :
+                                                        entry.reason || '— STANDARD'}
                                         </span>
                                     </td>
                                     <td className="px-8 py-5 text-right">

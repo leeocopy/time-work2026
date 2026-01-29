@@ -46,10 +46,10 @@ export default function TaskList() {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
                         <ListTodo className="w-8 h-8" />
-                        STRATEGIC TASKS
+                        TÂCHES STRATÉGIQUES
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
-                        Daily Objectives
+                        Objectifs du Jour
                     </p>
                 </div>
             </div>
@@ -57,7 +57,7 @@ export default function TaskList() {
             <form onSubmit={addTask} className="flex gap-3 mb-8">
                 <input
                     type="text"
-                    placeholder="CAPTURE NEW OBJECTIVE..."
+                    placeholder="AJOUTER UN OBJECTIF..."
                     className="flex-1 px-5 py-4 bg-slate-50 border-2 border-black outline-none text-xs font-black uppercase transition-all focus:bg-white placeholder:text-black/20"
                     value={newTask}
                     onChange={(e) => setNewTask(e.target.value)}
@@ -97,7 +97,7 @@ export default function TaskList() {
                     <div className="py-12 text-center flex flex-col items-center gap-4 border-4 border-dashed border-black/10">
                         <div className="text-4xl grayscale opacity-30">⚡</div>
                         <p className="text-[11px] font-black text-black/30 uppercase tracking-[0.2em] px-4 italic leading-relaxed">
-                            Clear horizon. Add your first objective above.
+                            Horizon dégagé. Ajoutez votre premier objectif ci-dessus.
                         </p>
                     </div>
                 )}

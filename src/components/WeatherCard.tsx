@@ -34,9 +34,9 @@ export default function WeatherCard({ city = 'Marrakech' }: { city?: string }) {
     }, [city]);
 
     const getWeatherInfo = (code: number) => {
-        if (code <= 3) return { icon: <Sun className="w-16 h-16 text-brand-yellow" />, condition: 'CLEAR SKY' };
-        if (code <= 50) return { icon: <Cloud className="w-16 h-16 text-black" />, condition: 'CLOUDY' };
-        return { icon: <CloudRain className="w-16 h-16 text-brand-blue" />, condition: 'RAINY' };
+        if (code <= 3) return { icon: <Sun className="w-16 h-16 text-brand-yellow" />, condition: 'CIEL DÉGAGÉ' };
+        if (code <= 50) return { icon: <Cloud className="w-16 h-16 text-black" />, condition: 'NUAGEUX' };
+        return { icon: <CloudRain className="w-16 h-16 text-brand-blue" />, condition: 'PLUVIEUX' };
     };
 
     const info = weather ? getWeatherInfo(weather.weathercode) : null;
@@ -47,7 +47,7 @@ export default function WeatherCard({ city = 'Marrakech' }: { city?: string }) {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
                         <Cloud className="w-8 h-8" />
-                        CLIMATIC
+                        MÉTÉO
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit">
                         {city}, MA
@@ -75,7 +75,7 @@ export default function WeatherCard({ city = 'Marrakech' }: { city?: string }) {
                         <div className="flex items-center gap-3">
                             <Wind className="w-5 h-5 text-brand-lime" />
                             <div className="flex flex-col">
-                                <span className="text-[8px] font-black uppercase opacity-40">Wind Speed</span>
+                                <span className="text-[8px] font-black uppercase opacity-40">Vent</span>
                                 <span className="text-xs font-black">{weather.windspeed} KM/H</span>
                             </div>
                         </div>

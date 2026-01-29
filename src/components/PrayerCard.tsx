@@ -56,10 +56,10 @@ export default function PrayerCard({ city = 'Marrakech' }: { city?: string }) {
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
                         <Moon className="w-8 h-8" />
-                        SPIRITUAL
+                        PRIÈRES
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
-                        Prayer Cycle Zone
+                        Horaires du Jour
                     </p>
                 </div>
             </div>
@@ -88,8 +88,8 @@ export default function PrayerCard({ city = 'Marrakech' }: { city?: string }) {
             </div>
 
             <div className="mt-8 pt-6 border-t-4 border-black/10 flex flex-col gap-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/40">Current Alignment</p>
-                <p className="text-lg font-black text-black italic">Wait for {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/40">Statut Actuel</p>
+                <p className="text-lg font-black text-black italic">Prochaine: {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
             </div>
         </div>
     );
