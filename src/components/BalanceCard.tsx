@@ -113,11 +113,11 @@ export default function BalanceCard({ entries, customHolidays, workGoal }: Balan
         <div className="brutalist-card bg-slush-blue group">
             <div className="flex justify-between items-start mb-10">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
-                        <TrendingUp className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-white">
+                        <TrendingUp className="w-6 h-6 md:w-8 md:h-8" />
                         BALANCE OVERVIEW
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
                         Your work hours balance.
                     </p>
                 </div>
@@ -129,12 +129,12 @@ export default function BalanceCard({ entries, customHolidays, workGoal }: Balan
             <div className="space-y-4">
                 {/* Daily Balance Card */}
                 <div className={cn(
-                    "p-6 border-4 border-black shadow-[8px_8px_0px_#000] transition-all rotate-1 hover:rotate-0",
+                    "p-4 md:p-6 border-4 border-black shadow-[6px_6px_0px_#000] md:shadow-[8px_8px_0px_#000] transition-all rotate-1 hover:rotate-0",
                     stats.dailyBalance >= 0 ? "bg-brand-lime" : "bg-brand-orange"
                 )}>
                     <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/60 mb-2">Daily Balance</span>
-                        <span className="text-4xl font-black text-black tracking-tighter tabular-nums">
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-black/60 mb-1 md:mb-2">Daily Balance</span>
+                        <span className="text-2xl md:text-4xl font-black text-black tracking-tighter tabular-nums">
                             {stats.dailyBalance >= 0 ? '+' : ''}{formatHours(stats.dailyBalance)}
                         </span>
                     </div>
@@ -142,12 +142,12 @@ export default function BalanceCard({ entries, customHolidays, workGoal }: Balan
 
                 {/* Monthly Balance Card */}
                 <div className={cn(
-                    "p-6 border-4 border-black shadow-[8px_8px_0px_#000] transition-all -rotate-1 hover:rotate-0",
+                    "p-4 md:p-6 border-4 border-black shadow-[6px_6px_0px_#000] md:shadow-[8px_8px_0px_#000] transition-all -rotate-1 hover:rotate-0",
                     stats.monthlyBalance >= 0 ? "bg-brand-lime" : "bg-brand-orange"
                 )}>
                     <div className="flex flex-col items-center text-center">
-                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-black/60 mb-2">Monthly Balance</span>
-                        <span className="text-4xl font-black text-black tracking-tighter tabular-nums">
+                        <span className="text-[8px] md:text-[10px] font-black uppercase tracking-[0.3em] text-black/60 mb-1 md:mb-2">Monthly Balance</span>
+                        <span className="text-2xl md:text-4xl font-black text-black tracking-tighter tabular-nums">
                             {stats.monthlyBalance >= 0 ? '+' : ''}{formatHours(stats.monthlyBalance)}
                         </span>
                     </div>

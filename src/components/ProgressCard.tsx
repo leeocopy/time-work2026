@@ -87,8 +87,8 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
         <div className="brutalist-card bg-slush-purple group h-full">
             <div className="flex justify-between items-start mb-8">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
-                        <Activity className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-white">
+                        <Activity className="w-6 h-6 md:w-8 md:h-8" />
                         TODAY'S PROGRESS
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-2 py-0.5 inline-block w-fit mt-1">
@@ -103,16 +103,16 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
                 </div>
             </div>
 
-            <div className="flex flex-col items-center gap-10">
-                <div className="relative w-44 h-44 bg-white border-4 border-black p-2 shadow-[8px_8px_0px_#000] flex-shrink-0 -rotate-1">
+            <div className="flex flex-col items-center gap-6 md:gap-10">
+                <div className="relative w-36 h-36 md:w-44 md:h-44 bg-white border-4 border-black p-2 shadow-[6px_6px_0px_#000] md:shadow-[8px_8px_0px_#000] flex-shrink-0 -rotate-1 md:-rotate-1">
                     <ResponsiveContainer width="100%" height="100%">
                         <PieChart>
                             <Pie
                                 data={data}
                                 cx="50%"
                                 cy="50%"
-                                innerRadius={45}
-                                outerRadius={65}
+                                innerRadius={35}
+                                outerRadius={55}
                                 paddingAngle={0}
                                 dataKey="value"
                                 stroke="none"
@@ -125,8 +125,8 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
                         </PieChart>
                     </ResponsiveContainer>
                     <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                        <span className="text-3xl font-black text-black leading-none">{stats.pct}%</span>
-                        <span className="text-[8px] font-black uppercase text-black/40">LOAD</span>
+                        <span className="text-2xl md:text-3xl font-black text-black leading-none">{stats.pct}%</span>
+                        <span className="text-[7px] md:text-[8px] font-black uppercase text-black/40">LOAD</span>
                     </div>
                 </div>
 
@@ -134,25 +134,25 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
                     <div className="bg-black text-white p-4 border-2 border-white/20 shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
                         <div className="grid grid-cols-2 gap-y-4">
                             <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-mint">Total Hours</p>
-                                <p className="text-xl font-black tabular-nums">{formatHours(stats.worked)}</p>
+                                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-brand-mint">Total Hours</p>
+                                <p className="text-lg md:text-xl font-black tabular-nums">{formatHours(stats.worked)}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Daily Balance</p>
+                                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Daily Balance</p>
                                 <p className={cn(
-                                    "text-xl font-black tabular-nums",
+                                    "text-lg md:text-xl font-black tabular-nums",
                                     stats.dailyBalance >= 0 ? "text-brand-lime" : "text-brand-orange"
                                 )}>
                                     {stats.dailyBalance >= 0 ? '+' : ''}{formatHours(stats.dailyBalance)}
                                 </p>
                             </div>
                             <div>
-                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Total Break</p>
-                                <p className="text-lg font-black tabular-nums text-white/60">{formatHours(stats.totalBreak)}</p>
+                                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Total Break</p>
+                                <p className="text-base md:text-lg font-black tabular-nums text-white/60">{formatHours(stats.totalBreak)}</p>
                             </div>
                             <div className="text-right">
-                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Leave Time</p>
-                                <p className="text-lg font-black tabular-nums text-white/60">
+                                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-widest text-white/40">Leave Time</p>
+                                <p className="text-base md:text-lg font-black tabular-nums text-white/60">
                                     {stats.leaveTime ? format(stats.leaveTime, 'HH:mm') : '--:--'}
                                 </p>
                             </div>

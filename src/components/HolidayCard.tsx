@@ -57,40 +57,40 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
         <div className="brutalist-card bg-white group">
             <div className="flex justify-between items-start mb-8">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
-                        <Calendar className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-black">
+                        <Calendar className="w-6 h-6 md:w-8 md:h-8" />
                         CONGÉS & FÉRIÉS
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
                         Aperçu Calendrier
                     </p>
                 </div>
                 <button
                     onClick={() => setIsAdding(!isAdding)}
-                    className="p-3 bg-brand-blue text-white border-2 border-black shadow-[4px_4px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
+                    className="p-2 md:p-3 bg-brand-blue text-white border-2 border-black shadow-[3px_3px_0px_#000] md:shadow-[4px_4px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
                 >
-                    {isAdding ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
+                    {isAdding ? <X className="w-4 h-4 md:w-5 md:h-5" /> : <Plus className="w-4 h-4 md:w-5 md:h-5" />}
                 </button>
             </div>
 
             {isAdding && (
-                <div className="mb-10 p-6 bg-slate-50 border-4 border-black shadow-[6px_6px_0px_#000] space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
-                    <div className="space-y-4">
+                <div className="mb-6 md:mb-10 p-4 md:p-6 bg-slate-50 border-4 border-black shadow-[4px_4px_0px_#000] md:shadow-[6px_6px_0px_#000] space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-3 md:space-y-4">
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase text-black/40">Identifier</label>
+                            <label className="text-[8px] md:text-[9px] font-black uppercase text-black/40">Identifier</label>
                             <input
                                 type="text"
                                 placeholder="EX: MALADIE, ABSENCE..."
-                                className="w-full bg-white border-2 border-black px-4 py-3 text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
+                                className="w-full bg-white border-2 border-black px-3 md:px-4 py-2 md:py-3 text-[10px] md:text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
                                 value={newName}
                                 onChange={(e) => setNewName(e.target.value)}
                             />
                         </div>
                         <div className="space-y-1">
-                            <label className="text-[9px] font-black uppercase text-black/40">Date</label>
+                            <label className="text-[8px] md:text-[9px] font-black uppercase text-black/40">Date</label>
                             <input
                                 type="date"
-                                className="w-full bg-white border-2 border-black px-4 py-3 text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
+                                className="w-full bg-white border-2 border-black px-3 md:px-4 py-2 md:py-3 text-[10px] md:text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
                                 value={newDate}
                                 onChange={(e) => setNewDate(e.target.value)}
                             />
@@ -98,7 +98,7 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                     </div>
                     <button
                         onClick={addHoliday}
-                        className="btn-brutalist w-full py-4 bg-black text-white"
+                        className="btn-brutalist w-full py-3 md:py-4 bg-black text-white text-[10px] md:text-xs"
                     >
                         Enregistrer
                     </button>

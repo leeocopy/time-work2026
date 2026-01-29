@@ -89,36 +89,37 @@ export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }
 
     return (
         <div className="brutalist-card bg-white overflow-hidden p-0">
-            <div className="p-8 border-b-4 border-black flex flex-col md:flex-row md:items-center justify-between gap-6 bg-brand-yellow">
+            <div className="p-4 md:p-8 border-b-4 border-black flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-6 bg-brand-yellow">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
-                        <Database className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-black">
+                        <Database className="w-6 h-6 md:w-8 md:h-8" />
                         ENTRY LOGS
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
                         Operational History: {filteredEntries.length} Units
                     </p>
                 </div>
 
                 <div className="flex items-center gap-3">
-                    <div className="relative group">
+                    <div className="relative group flex-1 md:flex-none">
                         <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
                         <input
                             type="date"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
-                            className="pl-10 pr-4 py-2 bg-white border-2 border-black font-black text-xs uppercase shadow-[4px_4px_0px_#000] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all outline-none"
+                            className="w-full md:w-auto pl-10 pr-4 py-2 bg-white border-2 border-black font-black text-xs uppercase shadow-[4px_4px_0px_#000] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all outline-none"
                         />
                     </div>
                     <div className="flex gap-2">
-                        <button onClick={handleExportPDF} className="btn-brutalist bg-black text-white p-2.5">
-                            <FileText className="w-5 h-5" />
+                        <button onClick={handleExportPDF} className="btn-brutalist bg-black text-white p-2 md:p-2.5">
+                            <FileText className="w-4 h-4 md:w-5 md:h-5" />
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* Desktop Table View */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-black text-white">
@@ -179,6 +180,57 @@ export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* Mobile Card View */}
+            <div className="block md:hidden">
+                <div className="divide-y-2 divide-black">
+                    {displayedEntries.length === 0 ? (
+                        <div className="px-6 py-12 text-center font-black text-black/20 text-lg italic uppercase">
+                            No data packets found
+                        </div>
+                    ) : (
+                        displayedEntries.map((entry) => (
+                            <div key={entry.id} className="p-4 space-y-3">
+                                <div className="flex justify-between items-start">
+                                    <div className="flex flex-col">
+                                        <span className="text-[10px] font-black text-black">{format(new Date(entry.timestamp), 'MMM dd, yyyy')}</span>
+                                        <span className="text-[10px] font-black text-black/40 tabular-nums">{format(new Date(entry.timestamp), 'HH:mm:ss')}</span>
+                                    </div>
+                                    <span className={cn(
+                                        "inline-flex items-center gap-2 px-2 py-0.5 border-2 border-black text-[8px] font-black uppercase tracking-widest",
+                                        entry.type === 'CHECK_IN' ? "bg-brand-lime text-black" : "bg-black text-white"
+                                    )}>
+                                        {entry.type.replace('_', ' ')}
+                                    </span>
+                                </div>
+
+                                <div className="flex justify-between items-center">
+                                    <span className="text-[10px] font-black text-black/60 italic">
+                                        {entry.reason === 'End of day' ? 'Fin de journée' :
+                                            entry.reason === 'Lunch break' ? 'Déjeuner' :
+                                                entry.reason === 'Short break' ? 'Pause' :
+                                                    entry.reason || '— STANDARD'}
+                                    </span>
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => startEditing(entry)}
+                                            className="p-1.5 border-2 border-black bg-brand-blue text-white shadow-[2px_2px_0px_#000] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                                        >
+                                            <Pencil className="w-3.5 h-3.5" />
+                                        </button>
+                                        <button
+                                            onClick={() => handleDelete(entry.id)}
+                                            className="p-1.5 border-2 border-black bg-brand-orange text-white shadow-[2px_2px_0px_#000] active:shadow-none active:translate-x-[1px] active:translate-y-[1px] transition-all"
+                                        >
+                                            <Trash2 className="w-3.5 h-3.5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))
+                    )}
+                </div>
             </div>
 
             {filteredEntries.length > 5 && (

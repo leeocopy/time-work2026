@@ -57,53 +57,53 @@ export default function PrayerCard({ city: initialCity = 'Marrakech' }: { city?:
 
     return (
         <div className="brutalist-card bg-slush-lime group h-full">
-            <div className="flex justify-between items-start mb-10">
+            <div className="flex justify-between items-start mb-6 md:mb-10">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
-                        <Moon className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-black">
+                        <Moon className="w-6 h-6 md:w-8 md:h-8" />
                         PRIÈRES
                     </h3>
                     <div className="mt-2 relative">
                         <select
                             value={city}
                             onChange={(e) => setCity(e.target.value)}
-                            className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-3 py-1.5 outline-none border-2 border-black hover:bg-white hover:text-black transition-colors cursor-pointer appearance-none pr-8"
+                            className="text-[9px] md:text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 md:px-3 py-1 md:py-1.5 outline-none border-2 border-black hover:bg-white hover:text-black transition-colors cursor-pointer appearance-none pr-6 md:pr-8"
                         >
                             {cities.map(c => <option key={c} value={c}>{c}</option>)}
                         </select>
                         <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
-                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-white group-hover:border-t-black" />
+                            <div className="w-0 h-0 border-l-[3px] md:border-l-[4px] border-l-transparent border-r-[3px] md:border-r-[4px] border-r-transparent border-t-[3px] md:border-t-[4px] border-t-white group-hover:border-t-black" />
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-2 md:space-y-3">
                 {prayerList.map((p) => {
                     const isActive = p.name === activePrayer;
                     return (
                         <div
                             key={p.name}
                             className={cn(
-                                "flex items-center justify-between p-4 border-2 border-black transition-all",
+                                "flex items-center justify-between p-3 md:p-4 border-2 border-black transition-all",
                                 isActive
-                                    ? "bg-black text-white scale-105 shadow-[6px_6px_0px_#fff] -rotate-1"
+                                    ? "bg-black text-white scale-[1.02] md:scale-105 shadow-[4px_4px_0px_#fff] md:shadow-[6px_6px_0px_#fff] -rotate-1"
                                     : "bg-white text-black"
                             )}
                         >
-                            <div className="flex items-center gap-3">
-                                <Clock className={cn("w-4 h-4", isActive ? "text-brand-yellow" : "text-black/20")} />
-                                <span className="text-xs font-black uppercase tracking-widest">{p.name}</span>
+                            <div className="flex items-center gap-2 md:gap-3">
+                                <Clock className={cn("w-3.5 h-3.5 md:w-4 h-4", isActive ? "text-brand-yellow" : "text-black/20")} />
+                                <span className="text-[10px] md:text-xs font-black uppercase tracking-widest">{p.name}</span>
                             </div>
-                            <span className="text-sm font-black tabular-nums">{p.time}</span>
+                            <span className="text-xs md:text-sm font-black tabular-nums">{p.time}</span>
                         </div>
                     );
                 })}
             </div>
 
-            <div className="mt-8 pt-6 border-t-4 border-black/10 flex flex-col gap-2">
-                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/40">Statut Actuel</p>
-                <p className="text-lg font-black text-black italic text-right">Prochaine: {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
+            <div className="mt-6 md:mt-8 pt-4 md:pt-6 border-t-4 border-black/10 flex flex-col gap-1 md:gap-2">
+                <p className="text-[8px] md:text-[9px] font-black uppercase tracking-[0.2em] text-black/40">Statut Actuel</p>
+                <p className="text-base md:text-lg font-black text-black italic text-right leading-none">Prochaine: {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
             </div>
         </div>
     );

@@ -67,8 +67,8 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
         <div className="brutalist-card bg-slush-mint group">
             <div className="flex justify-between items-start mb-10">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3">
-                        <Clock className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3">
+                        <Clock className="w-6 h-6 md:w-8 md:h-8" />
                         TIME TRACKER
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
@@ -82,16 +82,16 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                 </div>
             </div>
 
-            <div className="flex flex-col items-center gap-12">
+            <div className="flex flex-col items-center gap-8 md:gap-12">
                 {!isWorking ? (
                     <div className="flex flex-col items-center gap-10">
                         <button
                             onClick={() => handleAction('CHECK_IN')}
                             disabled={loading}
-                            className="relative w-48 h-48 rounded-full bg-black text-white border-4 border-white flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[8px_8px_0px_#fff] disabled:opacity-50"
+                            className="relative w-32 h-32 md:w-48 md:h-48 rounded-full bg-black text-white border-4 border-white flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[8px_8px_0px_#fff] disabled:opacity-50"
                         >
-                            <Play className="w-16 h-16 fill-brand-lime" />
-                            <span className="font-black uppercase tracking-[0.2em] text-[10px]">CHECK IN</span>
+                            <Play className="w-10 h-10 md:w-16 md:h-16 fill-brand-lime" />
+                            <span className="font-black uppercase tracking-[0.2em] text-[8px] md:text-[10px]">CHECK IN</span>
                         </button>
 
                         {isOnBreak && (
@@ -105,36 +105,36 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
                     </div>
                 ) : (
                     <div className="flex flex-col items-center w-full gap-10">
-                        <div className="bg-white border-4 border-black p-10 shadow-[10px_10px_0px_#000] w-full text-center -rotate-1">
-                            <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-2">Durée Session</span>
-                            <span className="text-6xl font-black text-black tracking-tighter tabular-nums">
+                        <div className="bg-white border-4 border-black p-6 md:p-10 shadow-[8px_8px_0px_#000] md:shadow-[10px_10px_0px_#000] w-full text-center -rotate-1">
+                            <span className="text-[8px] md:text-[10px] font-black uppercase tracking-widest text-black/40 block mb-2">Durée Session</span>
+                            <span className="text-3xl md:text-6xl font-black text-black tracking-tighter tabular-nums">
                                 {getElapsedTime(lastEntry!.timestamp)}
                             </span>
                         </div>
 
-                        <div className="flex flex-wrap justify-center gap-4">
+                        <div className="flex flex-wrap justify-center gap-3 md:gap-4">
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'End of day')}
                                 disabled={loading}
-                                className="btn-brutalist bg-black text-white px-10 py-4 text-xs"
+                                className="btn-brutalist bg-black text-white px-6 md:px-10 py-3 md:py-4 text-[10px] md:text-xs"
                             >
-                                <Square className="w-4 h-4 fill-brand-orange" />
+                                <Square className="w-3 h-3 md:w-4 md:h-4 fill-brand-orange" />
                                 CHECK OUT
                             </button>
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'Lunch break')}
                                 disabled={loading}
-                                className="btn-brutalist bg-brand-yellow text-black px-8 py-4 text-xs"
+                                className="btn-brutalist bg-brand-yellow text-black px-5 md:px-8 py-3 md:py-4 text-[10px] md:text-xs"
                             >
-                                <Utensils className="w-4 h-4" />
+                                <Utensils className="w-3 h-3 md:w-4 md:h-4" />
                                 LUNCH
                             </button>
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'Short break')}
                                 disabled={loading}
-                                className="btn-brutalist bg-brand-blue text-white px-8 py-4 text-xs"
+                                className="btn-brutalist bg-brand-blue text-white px-5 md:px-8 py-3 md:py-4 text-[10px] md:text-xs"
                             >
-                                <Coffee className="w-4 h-4" />
+                                <Coffee className="w-3 h-3 md:w-4 md:h-4" />
                                 BREAK
                             </button>
                         </div>

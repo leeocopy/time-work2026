@@ -107,14 +107,14 @@ export default function Dashboard({ user }: DashboardProps) {
         <div className="min-h-screen bg-[var(--bg-primary)] pb-20 selection:bg-brand-yellow/30">
             {/* High-Contrast Brutalist Header */}
             <header className="sticky top-0 z-50 bg-black text-white border-b-4 border-black">
-                <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-brand-yellow border-2 border-white flex items-center justify-center -rotate-2">
-                            <LayoutDashboard className="w-7 h-7 text-black" />
+                <div className="max-w-[1400px] mx-auto px-4 md:px-6 h-16 md:h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-3 md:gap-4">
+                        <div className="w-10 h-10 md:w-12 md:h-12 bg-brand-yellow border-2 border-white flex items-center justify-center -rotate-2">
+                            <LayoutDashboard className="w-5 h-5 md:w-7 md:h-7 text-black" />
                         </div>
                         <div className="flex flex-col">
-                            <h1 className="text-2xl font-black tracking-tighter leading-none italic">TIME WORK ABDOU</h1>
-                            <span className="text-[10px] font-black text-brand-mint uppercase tracking-[0.3em]">Operational Node v2.0</span>
+                            <h1 className="text-xl md:text-2xl font-black tracking-tighter leading-none italic">TIME WORK ABDOU</h1>
+                            <span className="text-[8px] md:text-[10px] font-black text-brand-mint uppercase tracking-[0.3em]">Operational Node v2.0</span>
                         </div>
                     </div>
 
@@ -129,16 +129,16 @@ export default function Dashboard({ user }: DashboardProps) {
                         <div className="flex items-center gap-2">
                             <button
                                 onClick={() => setIsSettingsOpen(true)}
-                                className="p-3 bg-brand-blue border-2 border-black shadow-[4px_4px_0px_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                                className="p-2 md:p-3 bg-brand-blue border-2 border-black shadow-[3px_3px_0px_#fff] md:shadow-[4px_4px_0px_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
                             >
-                                <SettingsIcon className="w-5 h-5 text-white" />
+                                <SettingsIcon className="w-4 h-4 md:w-5 md:h-5 text-white" />
                             </button>
 
                             <button
                                 onClick={handleSignOut}
-                                className="p-3 bg-brand-orange border-2 border-black shadow-[4px_4px_0px_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
+                                className="p-2 md:p-3 bg-brand-orange border-2 border-black shadow-[3px_3px_0px_#fff] md:shadow-[4px_4px_0px_#fff] hover:translate-x-[2px] hover:translate-y-[2px] hover:shadow-none transition-all"
                             >
-                                <LogOut className="w-5 h-5 text-white" />
+                                <LogOut className="w-4 h-4 md:w-5 md:h-5 text-white" />
                             </button>
                         </div>
                     </div>
@@ -153,11 +153,11 @@ export default function Dashboard({ user }: DashboardProps) {
                 onSave={saveSettings}
             />
 
-            <main className="max-w-[1400px] mx-auto px-6 mt-10">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            <main className="max-w-[1400px] mx-auto px-4 md:px-6 mt-6 md:mt-10">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 md:gap-8">
                     {/* Left Column - Main Controls & Status */}
-                    <div className="lg:col-span-8 space-y-8">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                    <div className="lg:col-span-8 space-y-6 md:space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8">
                             <TimeTracker user={user} onEntryAdded={fetchEntries} />
                             <ProgressCard entries={entries} workGoal={workGoal} />
                         </div>
@@ -236,9 +236,9 @@ function CollapsibleCard({ id, title, children, isCollapsed, onToggle }: { id: s
         <div className="flex flex-col gap-2">
             <button
                 onClick={onToggle}
-                className="flex items-center justify-between px-6 py-3 bg-white border-2 border-black shadow-[4px_4px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all group"
+                className="flex items-center justify-between px-4 md:px-6 py-2.5 md:py-3 bg-white border-2 border-black shadow-[3px_3px_0px_#000] md:shadow-[4px_4px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all group"
             >
-                <span className="text-[11px] font-black text-black uppercase tracking-[0.2em]">{title}</span>
+                <span className="text-[10px] md:text-[11px] font-black text-black uppercase tracking-[0.15em] md:tracking-[0.2em]">{title}</span>
                 <div className="p-1 bg-black text-white">
                     {isCollapsed ? <ChevronDown className="w-3 h-3" /> : <ChevronUp className="w-3 h-3" />}
                 </div>

@@ -43,17 +43,17 @@ export default function ProductivityCard({ entries }: ProductivityCardProps) {
         <div className="brutalist-card bg-white group">
             <div className="flex justify-between items-start mb-8">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
-                        <BarChart3 className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-black">
+                        <BarChart3 className="w-6 h-6 md:w-8 md:h-8" />
                         PRODUCTIVITÉ
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
                         7 Dernières Sessions
                     </p>
                 </div>
             </div>
 
-            <div className="h-64 w-full bg-slate-50 border-2 border-black p-4 mb-8">
+            <div className="h-48 md:h-64 w-full bg-slate-50 border-2 border-black p-4 mb-6 md:mb-8">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
                         <XAxis
@@ -84,22 +84,22 @@ export default function ProductivityCard({ entries }: ProductivityCardProps) {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center gap-4 p-4 border-2 border-black bg-brand-yellow shadow-[4px_4px_0px_#000]">
-                    <div className="w-12 h-12 bg-black border-2 border-white flex items-center justify-center rotate-3">
-                        <Zap className="w-6 h-6 text-brand-yellow" />
+                <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 border-2 border-black bg-brand-yellow shadow-[4px_4px_0px_#000]">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-black border-2 border-white flex items-center justify-center rotate-3">
+                        <Zap className="w-5 h-5 md:w-6 md:h-6 text-brand-yellow" />
                     </div>
                     <div className="flex flex-col">
-                        <p className="text-xs font-black uppercase">Roi de la Constance</p>
-                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">Série de 5 jours</p>
+                        <p className="text-[10px] md:text-xs font-black uppercase">Roi de la Constance</p>
+                        <p className="text-[8px] md:text-[9px] font-black text-black/40 uppercase tracking-widest">Série de 5 jours</p>
                     </div>
                 </div>
-                <div className="flex items-center gap-4 p-4 border-2 border-black bg-brand-blue shadow-[4px_4px_0px_#000]">
-                    <div className="w-12 h-12 bg-black border-2 border-white flex items-center justify-center -rotate-3">
-                        <Trophy className="w-6 h-6 text-brand-blue" />
+                <div className="flex items-center gap-3 md:gap-4 p-3 md:p-4 border-2 border-black bg-brand-blue shadow-[4px_4px_0px_#000]">
+                    <div className="w-10 h-10 md:w-12 md:h-12 bg-black border-2 border-white flex items-center justify-center -rotate-3">
+                        <Trophy className="w-5 h-5 md:w-6 md:h-6 text-brand-blue" />
                     </div>
                     <div className="flex flex-col text-white">
-                        <p className="text-xs font-black uppercase">Maître du Travail</p>
-                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">42 heures au total</p>
+                        <p className="text-[10px] md:text-xs font-black uppercase">Maître du Travail</p>
+                        <p className="text-[8px] md:text-[9px] font-black text-white/40 uppercase tracking-widest">42 heures au total</p>
                     </div>
                 </div>
             </div>

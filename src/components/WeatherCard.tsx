@@ -34,9 +34,9 @@ export default function WeatherCard({ city = 'Marrakech' }: { city?: string }) {
     }, [city]);
 
     const getWeatherInfo = (code: number) => {
-        if (code <= 3) return { icon: <Sun className="w-16 h-16 text-brand-yellow" />, condition: 'CIEL DÉGAGÉ' };
-        if (code <= 50) return { icon: <Cloud className="w-16 h-16 text-black" />, condition: 'NUAGEUX' };
-        return { icon: <CloudRain className="w-16 h-16 text-brand-blue" />, condition: 'PLUVIEUX' };
+        if (code <= 3) return { icon: <Sun className="w-12 h-12 md:w-16 md:h-16 text-brand-yellow" />, condition: 'CIEL DÉGAGÉ' };
+        if (code <= 50) return { icon: <Cloud className="w-12 h-12 md:w-16 md:h-16 text-black" />, condition: 'NUAGEUX' };
+        return { icon: <CloudRain className="w-12 h-12 md:w-16 md:h-16 text-brand-blue" />, condition: 'PLUVIEUX' };
     };
 
     const info = weather ? getWeatherInfo(weather.weathercode) : null;
@@ -45,11 +45,11 @@ export default function WeatherCard({ city = 'Marrakech' }: { city?: string }) {
         <div className="brutalist-card bg-slush-orange group h-full">
             <div className="flex justify-between items-start mb-6">
                 <div className="flex flex-col">
-                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
-                        <Cloud className="w-8 h-8" />
+                    <h3 className="text-xl md:text-2xl font-black italic flex items-center gap-2 md:gap-3 text-white">
+                        <Cloud className="w-6 h-6 md:w-8 md:h-8" />
                         MÉTÉO
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit">
+                    <p className="text-[8px] md:text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
                         {city}, MA
                     </p>
                 </div>
@@ -61,12 +61,12 @@ export default function WeatherCard({ city = 'Marrakech' }: { city?: string }) {
                 </div>
             ) : info && (
                 <div className="flex flex-col gap-6">
-                    <div className="bg-white border-4 border-black p-8 shadow-[8px_8px_0px_#000] flex flex-col items-center -rotate-2 group-hover:rotate-0 transition-transform">
-                        <div className="mb-4">{info.icon}</div>
-                        <span className="text-6xl font-black text-black tracking-tighter tabular-nums leading-none">
+                    <div className="bg-white border-4 border-black p-6 md:p-8 shadow-[6px_6px_0px_#000] md:shadow-[8px_8px_0px_#000] flex flex-col items-center -rotate-2 group-hover:rotate-0 transition-transform">
+                        <div className="mb-2 md:mb-4">{info.icon}</div>
+                        <span className="text-4xl md:text-6xl font-black text-black tracking-tighter tabular-nums leading-none">
                             {Math.round(weather.temperature)}°
                         </span>
-                        <span className="text-[10px] font-black text-black/40 uppercase tracking-[0.3em] mt-3">
+                        <span className="text-[8px] md:text-[10px] font-black text-black/40 uppercase tracking-[0.3em] mt-2 md:mt-3">
                             {info.condition}
                         </span>
                     </div>
