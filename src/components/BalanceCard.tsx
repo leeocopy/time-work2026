@@ -156,69 +156,76 @@ export default function BalanceCard({ entries, customHolidays }: BalanceCardProp
     const monthly = formatDuration(monthlyBalance);
 
     return (
-        <div className="bg-white dark:bg-zinc-900 px-6 py-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
-            <div className="flex flex-col gap-1">
-                <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                    <Calendar className="w-5 h-5 text-indigo-500" />
-                    Balance Overview
-                </h3>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium italic">
-                    Your live work progress.
+        <div className="glass-card hover-premium px-8 py-10 rounded-[2rem] flex flex-col gap-8">
+            <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 bg-indigo-500/10 rounded-xl">
+                        <Calendar className="w-6 h-6 text-indigo-500" />
+                    </div>
+                    <h3 className="text-xl font-extrabold tracking-tight">
+                        Balance Overview
+                    </h3>
+                </div>
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest pl-11">
+                    Performance Analytics
                 </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-6">
                 {/* Daily Status Section */}
                 <div className={cn(
-                    "p-6 rounded-2xl flex flex-col gap-4 transition-colors",
+                    "p-8 rounded-[1.5rem] flex flex-col gap-6 transition-all border",
                     remaining.isNegative
-                        ? "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40"
-                        : "bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40"
+                        ? "bg-emerald-500/[0.03] border-emerald-500/20 shadow-[0_0_20px_-5px_rgba(16,185,129,0.1)]"
+                        : "bg-rose-500/[0.03] border-rose-500/20 shadow-[0_0_20px_-5px_rgba(244,63,94,0.1)]"
                 )}>
-                    <div className="flex flex-col items-center gap-1">
-                        <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">
+                    <div className="flex flex-col items-center gap-2">
+                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
                             {remaining.isNegative ? "Surplus reached" : "Remaining Today"}
                         </span>
                         <span className={cn(
-                            "text-4xl font-extrabold tracking-tighter",
-                            remaining.isNegative ? "text-emerald-500" : "text-red-500"
+                            "text-5xl font-black tracking-tighter drop-shadow-sm",
+                            remaining.isNegative ? "text-emerald-500" : "text-rose-500"
                         )}>
                             {remaining.isNegative ? formatSimple(Math.abs(remainingToday)) : formatSimple(remainingToday)}
                         </span>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2 pt-4 border-t border-zinc-200/50 dark:border-zinc-700/50">
-                        <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase">Worked</span>
-                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{formatSimple(workedToday)}</span>
+                    <div className="grid grid-cols-2 gap-4 pt-6 border-t border-zinc-200/30 dark:border-zinc-800/50">
+                        <div className="flex flex-col gap-1">
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Worked</span>
+                            <span className="text-base font-extrabold">{formatSimple(workedToday)}</span>
                         </div>
-                        <div className="flex flex-col items-end">
-                            <span className="text-[10px] font-bold text-zinc-400 uppercase">Required</span>
-                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{formatSimple(requiredToday)}</span>
+                        <div className="flex flex-col items-end gap-1">
+                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Required</span>
+                            <span className="text-base font-extrabold">{formatSimple(requiredToday)}</span>
                         </div>
                     </div>
                 </div>
 
                 {/* Monthly Total Section */}
                 <div className={cn(
-                    "p-6 rounded-2xl flex flex-col items-center gap-1 transition-colors",
+                    "p-8 rounded-[1.5rem] flex flex-col items-center gap-2 transition-all border",
                     monthly.isNegative
-                        ? "bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40"
-                        : "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40"
+                        ? "bg-rose-500/[0.02] border-rose-500/10"
+                        : "bg-emerald-500/[0.02] border-emerald-500/10"
                 )}>
-                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">Monthly Balance</span>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Monthly Balance</span>
                     <span className={cn(
-                        "text-2xl font-extrabold tracking-tighter",
-                        monthly.isNegative ? "text-red-500" : "text-emerald-500"
+                        "text-3xl font-black tracking-tighter",
+                        monthly.isNegative ? "text-rose-500" : "text-emerald-500"
                     )}>
                         {monthly.text}
                     </span>
                 </div>
             </div>
 
-            <p className="text-[10px] text-center text-zinc-400 uppercase font-black tracking-widest">
-                Resets on the 1st of {format(new Date(), 'MMMM')}
-            </p>
+            <div className="flex flex-col items-center gap-3">
+                <div className="h-px w-12 bg-zinc-200 dark:bg-zinc-800" />
+                <p className="text-[10px] text-center text-zinc-400 uppercase font-black tracking-[0.3em]">
+                    Resets {format(new Date(), 'MMMM')} 01
+                </p>
+            </div>
         </div>
     );
 }

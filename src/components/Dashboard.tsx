@@ -13,6 +13,7 @@ import PrayerCard from './PrayerCard';
 import WeatherCard from './WeatherCard';
 import ProductivityCard from './ProductivityCard';
 import QuoteCard from './QuoteCard';
+import AyahCard from './AyahCard';
 import TaskList from './TaskList';
 import { LogOut, User as UserIcon, LayoutDashboard, Database, AlertCircle, CheckCircle } from 'lucide-react';
 import { CustomHoliday } from './HolidayCard';
@@ -74,33 +75,39 @@ export default function Dashboard({ user }: DashboardProps) {
     };
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-black text-zinc-900 dark:text-zinc-100 font-sans pb-12">
+        <div className="min-h-screen bg-[var(--background)] text-[var(--foreground)] font-sans pb-20 selection:bg-indigo-500/30">
             {/* Header */}
-            <header className="sticky top-0 z-50 bg-white/80 dark:bg-black/80 backdrop-blur-md border-b border-zinc-200 dark:border-zinc-800">
-                <div className="max-w-[1400px] mx-auto px-4 h-16 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-                            <LayoutDashboard className="w-5 h-5 text-white" />
+            <header className="sticky top-0 z-50 bg-[var(--background)]/80 backdrop-blur-xl border-b border-[var(--card-border)]">
+                <div className="max-w-[1400px] mx-auto px-6 h-20 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-indigo-500/20">
+                            <LayoutDashboard className="w-6 h-6 text-white" />
                         </div>
-                        <h1 className="font-bold text-lg hidden sm:block">WorkTimer Pro</h1>
+                        <div className="flex flex-col">
+                            <h1 className="font-extrabold text-xl tracking-tight hidden sm:block">WorkTimer Pro</h1>
+                            <span className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest leading-none hidden sm:block">Advanced Operations</span>
+                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
-                        <div className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border border-zinc-200 dark:border-zinc-800 text-[10px] font-bold uppercase transition-colors">
-                            <Database className="w-3 h-3" />
-                            Status: {profileStatus === 'ok' ? (
-                                <span className="text-green-500 flex items-center gap-1">Connected <CheckCircle className="w-3 h-3" /></span>
-                            ) : profileStatus === 'missing' ? (
-                                <span className="text-red-500 flex items-center gap-1">Setup Needed <AlertCircle className="w-3 h-3" /></span>
-                            ) : 'Checking...'}
+                        <div className="hidden md:flex items-center gap-3 px-4 py-2 rounded-xl bg-[var(--card)] border border-[var(--card-border)] text-[10px] font-black uppercase transition-all hover:border-indigo-500/50">
+                            <div className={`w-2 h-2 rounded-full ${profileStatus === 'ok' ? 'bg-emerald-500 animate-pulse' : 'bg-red-500'}`} />
+                            <span className="text-zinc-500 dark:text-zinc-400">DB Status:</span>
+                            {profileStatus === 'ok' ? (
+                                <span className="text-emerald-500 tracking-wider">Operational</span>
+                            ) : (
+                                <span className="text-red-500 tracking-wider">Action Required</span>
+                            )}
                         </div>
-                        <div className="flex items-center gap-2 px-3 py-1.5 bg-zinc-100 dark:bg-zinc-900 rounded-full border border-zinc-200 dark:border-zinc-800">
-                            <UserIcon className="w-4 h-4 text-zinc-500" />
-                            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{user.email}</span>
+                        <div className="flex items-center gap-3 px-4 py-2 bg-[var(--card)] rounded-xl border border-[var(--card-border)] hover:border-indigo-500/30 transition-all group">
+                            <div className="w-6 h-6 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center group-hover:bg-indigo-500/10 transition-colors">
+                                <UserIcon className="w-4 h-4 text-zinc-500 group-hover:text-indigo-500" />
+                            </div>
+                            <span className="text-xs font-bold text-zinc-600 dark:text-zinc-300 hidden lg:block">{user.email}</span>
                         </div>
                         <button
                             onClick={handleSignOut}
-                            className="p-2 text-zinc-500 hover:text-red-500 transition-colors"
+                            className="p-2.5 bg-red-50 dark:bg-red-900/10 text-red-500 hover:bg-red-100 dark:hover:bg-red-900/20 rounded-xl transition-all active:scale-95"
                         >
                             <LogOut className="w-5 h-5" />
                         </button>
@@ -108,18 +115,18 @@ export default function Dashboard({ user }: DashboardProps) {
                 </div>
             </header>
 
-            <main className="max-w-[1400px] mx-auto px-4 mt-8">
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            <main className="max-w-[1400px] mx-auto px-6 mt-10">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
                     {/* Left Column - Main Controls & Status */}
-                    <div className="lg:col-span-8 space-y-6">
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="lg:col-span-8 space-y-8">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <TimeTracker user={user} onEntryAdded={fetchEntries} />
                             <ProgressCard entries={entries} />
                         </div>
 
                         <EntriesTable entries={entries} onEntryDeleted={fetchEntries} onEntryUpdated={fetchEntries} />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                             <ManualEntry user={user} onEntryAdded={fetchEntries} />
                             <TaskList />
                         </div>
@@ -127,11 +134,12 @@ export default function Dashboard({ user }: DashboardProps) {
                     </div>
 
                     {/* Right Column - Secondary Info */}
-                    <div className="lg:col-span-4 space-y-6">
+                    <div className="lg:col-span-4 space-y-8">
                         <BalanceCard entries={entries} customHolidays={customHolidays} />
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-8">
                             <WeatherCard />
+                            <AyahCard />
                             <QuoteCard />
                         </div>
 

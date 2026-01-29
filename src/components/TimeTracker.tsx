@@ -54,62 +54,87 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
     const isWorking = lastEntry?.type === 'CHECK_IN';
 
     return (
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                    <Clock className="w-5 h-5 text-indigo-500" />
-                    Time Tracker
-                </h3>
-                <div className="text-2xl font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                    {mounted ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
+        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-8 relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
+
+            <div className="flex justify-between items-center relative z-10">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight">
+                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
+                            <Clock className="w-5 h-5 text-indigo-500" />
+                        </div>
+                        Time Tracker
+                    </h3>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10">Live Analytics</p>
+                </div>
+                <div className="px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 shadow-inner">
+                    <span className="text-2xl font-black font-mono tracking-tighter text-indigo-600 dark:text-indigo-400">
+                        {mounted ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
+                    </span>
                 </div>
             </div>
 
-            <div className="flex flex-col items-center gap-6">
+            <div className="flex flex-col items-center gap-8 relative z-10">
                 {!isWorking ? (
-                    <button
-                        onClick={() => handleAction('CHECK_IN')}
-                        disabled={loading}
-                        className="w-32 h-32 rounded-full bg-indigo-600 hover:bg-indigo-700 text-white flex flex-col items-center justify-center gap-2 transition-all shadow-lg shadow-indigo-500/30 group disabled:opacity-50"
-                    >
-                        <Play className="w-10 h-10 fill-current group-hover:scale-110 transition-transform" />
-                        <span className="font-bold">Check In</span>
-                    </button>
+                    <div className="relative group">
+                        <div className="absolute inset-0 bg-indigo-600 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity animate-pulse" />
+                        <button
+                            onClick={() => handleAction('CHECK_IN')}
+                            disabled={loading}
+                            className="relative w-40 h-40 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-indigo-500/40 disabled:opacity-50 border-4 border-white/10"
+                        >
+                            <Play className="w-12 h-12 fill-current drop-shadow-lg" />
+                            <span className="font-black uppercase tracking-widest text-xs">Check In</span>
+                        </button>
+                    </div>
                 ) : (
-                    <div className="flex flex-wrap justify-center gap-4">
-                        <button
-                            onClick={() => handleAction('CHECK_OUT', 'End of day')}
-                            disabled={loading}
-                            className="px-6 py-3 rounded-xl bg-red-100 dark:bg-red-900/30 text-red-600 dark:text-red-400 font-bold flex items-center gap-2 hover:bg-red-200 transition-colors disabled:opacity-50"
-                        >
-                            <Square className="w-5 h-5 fill-current" />
-                            End Day
-                        </button>
-                        <button
-                            onClick={() => handleAction('CHECK_OUT', 'Lunch break')}
-                            disabled={loading}
-                            className="px-6 py-3 rounded-xl bg-orange-100 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400 font-bold flex items-center gap-2 hover:bg-orange-200 transition-colors disabled:opacity-50"
-                        >
-                            <Utensils className="w-5 h-5" />
-                            Lunch
-                        </button>
-                        <button
-                            onClick={() => handleAction('CHECK_OUT', 'Short break')}
-                            disabled={loading}
-                            className="px-6 py-3 rounded-xl bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400 font-bold flex items-center gap-2 hover:bg-amber-200 transition-colors disabled:opacity-50"
-                        >
-                            <Coffee className="w-5 h-5" />
-                            Break
-                        </button>
+                    <div className="flex flex-col items-center gap-6">
+                        <div className="relative flex items-center justify-center w-24 h-24 mb-2">
+                            <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping" />
+                            <div className="absolute inset-2 bg-indigo-500/40 rounded-full animate-pulse" />
+                            <div className="relative w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
+                                <Clock className="w-8 h-8 text-white animate-spin-slow" />
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap justify-center gap-3">
+                            <button
+                                onClick={() => handleAction('CHECK_OUT', 'End of day')}
+                                disabled={loading}
+                                className="px-6 py-3 rounded-2xl bg-rose-500 text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-rose-600 hover:shadow-lg hover:shadow-rose-500/30 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                <Square className="w-4 h-4 fill-current" />
+                                End Day
+                            </button>
+                            <button
+                                onClick={() => handleAction('CHECK_OUT', 'Lunch break')}
+                                disabled={loading}
+                                className="px-6 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:border-orange-500/50 hover:text-orange-500 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                <Utensils className="w-4 h-4" />
+                                Lunch
+                            </button>
+                            <button
+                                onClick={() => handleAction('CHECK_OUT', 'Short break')}
+                                disabled={loading}
+                                className="px-6 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:border-amber-500/50 hover:text-amber-500 transition-all active:scale-95 disabled:opacity-50"
+                            >
+                                <Coffee className="w-4 h-4" />
+                                Break
+                            </button>
+                        </div>
                     </div>
                 )}
 
                 {lastEntry && (
-                    <p className="text-sm text-zinc-500 dark:text-zinc-400">
-                        Last event: <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                            {lastEntry.type === 'CHECK_IN' ? 'Started at' : `Stopped (${lastEntry.reason}) at`} {mounted ? new Date(lastEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                        </span>
-                    </p>
+                    <div className="px-4 py-2 bg-zinc-50 dark:bg-black/20 rounded-full border border-zinc-100 dark:border-white/5">
+                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
+                            {lastEntry.type === 'CHECK_IN' ? 'Active session started at' : `Last break (${lastEntry.reason}) at`}
+                            <span className="ml-2 text-zinc-800 dark:text-zinc-200 font-black">
+                                {mounted ? new Date(lastEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                            </span>
+                        </p>
+                    </div>
                 )}
             </div>
         </div>

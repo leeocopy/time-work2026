@@ -1,7 +1,8 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Moon, MapPin } from 'lucide-react';
+import { Clock, MapPin } from 'lucide-react';
+import { cn } from '@/lib/utils';
 
 export default function PrayerCard() {
     const [times, setTimes] = useState<any>(null);
@@ -35,15 +36,25 @@ export default function PrayerCard() {
     };
 
     const prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
+    const prayers = prayerOrder.map(name => ({
+        name: name,
+        time: times ? times[name] : '--:--'
+    }));
 
     return (
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm h-full">
-            <div className="flex justify-between items-center mb-6">
-                <h3 className="text-lg font-bold flex items-center gap-2">
-                    <Moon className="w-5 h-5 text-indigo-500" />
-                    Prayer Times
-                </h3>
-                <div className="flex items-center gap-1 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full font-bold uppercase text-zinc-500">
+        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-6">
+            <div className="flex justify-between items-center">
+                <div className="flex flex-col gap-1">
+                    <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight transition-colors">
+                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
+                            <Clock className="w-5 h-5 text-indigo-500" />
+                        </div>
+                        Prayer Schedule
+                    </h3>
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10 font-arabic">Al-Adhan • Marrakech</p>
+                </div>
+                {/* City selection removed from header as per new layout, but keeping the original logic for now */}
+                {/* <div className="flex items-center gap-1 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full font-bold uppercase text-zinc-500">
                     <MapPin className="w-3 h-3" />
                     <select
                         value={city}
@@ -54,13 +65,13 @@ export default function PrayerCard() {
                         <option value="Casablanca">Casablanca</option>
                         <option value="Rabat">Rabat</option>
                     </select>
-                </div>
+                </div> */}
             </div>
 
             {loading ? (
                 <div className="space-y-3 animate-pulse">
                     {[1, 2, 3, 4, 5].map(i => (
-                        <div key={i} className="h-8 bg-zinc-100 dark:bg-zinc-800 rounded-lg"></div>
+                        <div key={i} className="h-14 bg-zinc-100 dark:bg-zinc-800 rounded-2xl"></div>
                     ))}
                 </div>
             ) : (

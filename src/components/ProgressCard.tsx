@@ -70,49 +70,55 @@ export default function ProgressCard({ entries }: ProgressCardProps) {
     };
 
     return (
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col items-center">
-            <h3 className="text-lg font-bold mb-4 w-full">Today's Progress</h3>
+        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col items-center">
+            <h3 className="text-xl font-bold mb-6 w-full tracking-tight">Today's Progress</h3>
 
-            <div className="w-full h-48 relative">
+            <div className="w-full h-56 relative mb-6">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
                             data={data}
-                            innerRadius={60}
-                            outerRadius={80}
-                            paddingAngle={5}
+                            innerRadius={70}
+                            outerRadius={90}
+                            paddingAngle={8}
                             dataKey="value"
                             startAngle={90}
                             endAngle={-270}
+                            stroke="none"
                         >
                             {data.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} stroke="none" />
+                                <Cell key={`cell-${index}`} fill={entry.color} />
                             ))}
                         </Pie>
                     </PieChart>
                 </ResponsiveContainer>
                 <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-2xl font-bold text-indigo-600">{stats.pct}%</span>
-                    <span className="text-xs text-zinc-500 uppercase font-bold tracking-wider">Goal</span>
+                    <span className="text-4xl font-black tracking-tighter text-indigo-600 dark:text-indigo-400">{stats.pct}%</span>
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-1">Daily Cap</span>
                 </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 w-full mt-4">
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
-                    <p className="text-xs text-zinc-500 font-bold uppercase">Worked</p>
-                    <p className="text-lg font-bold text-indigo-600">{formatHours(stats.worked)}</p>
+            <div className="grid grid-cols-2 gap-4 w-full">
+                <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">Worked</p>
+                    <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{formatHours(stats.worked)}</p>
                 </div>
-                <div className="p-3 bg-zinc-50 dark:bg-zinc-800 rounded-xl">
-                    <p className="text-xs text-zinc-500 font-bold uppercase">Breaks</p>
-                    <p className="text-lg font-bold text-amber-500">{formatHours(stats.breaks)}</p>
+                <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
+                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">Breaks</p>
+                    <p className="text-xl font-black text-amber-500">{formatHours(stats.breaks)}</p>
                 </div>
             </div>
 
-            <div className="mt-4 w-full pt-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-between items-center">
-                <span className="text-sm font-medium text-zinc-600 dark:text-zinc-400">Daily Balance</span>
-                <span className={`font-bold ${stats.worked >= (8.5 * 60) ? 'text-green-500' : 'text-zinc-400'}`}>
-                    {stats.worked >= (8.5 * 60) ? 'Goal Met! 🎉' : `-${formatHours(stats.remaining)}`}
-                </span>
+            <div className="mt-8 w-full pt-6 border-t border-zinc-200/50 dark:border-white/5 flex justify-between items-center">
+                <div className="flex flex-col">
+                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Net Status</span>
+                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mt-1">Daily Balance</span>
+                </div>
+                <div className="flex flex-col items-end">
+                    <span className={`text-sm font-black tracking-tight ${stats.worked >= (8.5 * 60) ? 'text-emerald-500' : 'text-rose-500'}`}>
+                        {stats.worked >= (8.5 * 60) ? 'GOAL ACHIEVED 🎉' : `-${formatHours(stats.remaining)}`}
+                    </span>
+                </div>
             </div>
         </div>
     );

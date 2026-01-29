@@ -35,18 +35,23 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
     };
 
     return (
-        <div className="bg-white dark:bg-zinc-900 p-6 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm">
-            <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
-                <PlusCircle className="w-5 h-5 text-indigo-500" />
-                Manual Entry
-            </h3>
+        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-6">
+            <div className="flex flex-col gap-1">
+                <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight transition-colors">
+                    <div className="p-1.5 bg-indigo-500/10 rounded-lg">
+                        <PlusCircle className="w-5 h-5 text-indigo-500" />
+                    </div>
+                    Retroactive Log
+                </h3>
+                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10">Manual Adjustment</p>
+            </div>
 
-            <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-1">
-                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Date & Time</label>
+            <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1 text-center block">Temporal Target</label>
                     <input
                         type="datetime-local"
-                        className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium"
+                        className="w-full px-5 py-4 rounded-2xl border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold transition-all"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         required
@@ -54,28 +59,28 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-1">
-                        <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Type</label>
+                    <div className="space-y-2">
+                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1 text-center block">Type</label>
                         <select
-                            className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium"
+                            className="w-full px-5 py-4 rounded-2xl border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-black transition-all appearance-none cursor-pointer"
                             value={type}
                             onChange={(e) => setType(e.target.value as any)}
                         >
-                            <option value="CHECK_IN">Check In</option>
-                            <option value="CHECK_OUT">Check Out</option>
+                            <option value="CHECK_IN">INFLOW</option>
+                            <option value="CHECK_OUT">OUTFLOW</option>
                         </select>
                     </div>
                     {type === 'CHECK_OUT' && (
-                        <div className="space-y-1">
-                            <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-wider">Reason</label>
+                        <div className="space-y-2">
+                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1 text-center block">Condition</label>
                             <select
-                                className="w-full px-4 py-2 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 focus:ring-2 focus:ring-indigo-500 outline-none text-sm font-medium"
+                                className="w-full px-5 py-4 rounded-2xl border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-black transition-all appearance-none cursor-pointer"
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                             >
-                                <option value="End of day">End of day</option>
-                                <option value="Lunch break">Lunch break</option>
-                                <option value="Short break">Short break</option>
+                                <option value="End of day">EOD</option>
+                                <option value="Lunch break">LUNCH</option>
+                                <option value="Short break">BREAK</option>
                             </select>
                         </div>
                     )}
@@ -84,9 +89,9 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-bold text-sm transition-all disabled:opacity-50"
+                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
                 >
-                    {loading ? 'Adding...' : 'Add Manual Entry'}
+                    {loading ? 'Processing...' : 'Synchronize Record'}
                 </button>
             </form>
         </div>
