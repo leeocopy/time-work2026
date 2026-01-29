@@ -11,12 +11,14 @@ export default function RegisterPage() {
     const [name, setName] = useState('');
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
+    const [success, setSuccess] = useState(false);
     const router = useRouter();
 
     const handleRegister = async (e: React.FormEvent) => {
         e.preventDefault();
         setLoading(true);
         setError(null);
+        setSuccess(false);
 
         try {
             const { data, error: signUpError } = await supabase.auth.signUp({
@@ -32,7 +34,12 @@ export default function RegisterPage() {
             if (signUpError) throw signUpError;
 
             if (data.user) {
-                router.push('/');
+                // Check if user is already confirmed (happens if "Confirm email" is OFF in Supabase)
+                if (data.session) {
+                    router.push('/');
+                } else {
+                    setSuccess(true);
+                }
             }
         } catch (err: any) {
             setError(err.message);
@@ -78,13 +85,18 @@ export default function RegisterPage() {
                             onChange={(e) => setPassword(e.target.value)}
                         />
                     </div>
-                    {error && <p className="text-red-500 text-sm">{error}</p>}
+                    {error && <p className="text-red-500 text-sm bg-red-50 dark:bg-red-900/20 p-3 rounded-lg border border-red-200 dark:border-red-800">{error}</p>}
+                    {success && (
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 p-4 rounded-lg border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 text-sm">
+                            Registration successful! Please check your email to verify your account before logging in.
+                        </div>
+                    )}
                     <button
                         type="submit"
-                        disabled={loading}
+                        disabled={loading || success}
                         className="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg font-semibold transition-all shadow-lg shadow-indigo-500/30 disabled:opacity-50"
                     >
-                        {loading ? 'Creating Account...' : 'Sign Up'}
+                        {loading ? 'Creating Account...' : (success ? 'Account Created' : 'Sign Up')}
                     </button>
                 </form>
                 <p className="mt-6 text-center text-sm text-zinc-600 dark:text-zinc-400">
