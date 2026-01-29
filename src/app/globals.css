@@ -1,91 +1,26 @@
-@import url('https://fonts.googleapis.com/css2?family=Titan+One&display=swap');
+@import "tailwindcss";
 
 :root {
-  /* Midnight Slate Eye-Care Palette */
-  --background: #0f172a;
-  --foreground: #f1f5f9;
-
-  /* Card Surface Layers */
-  --card-bg: #1e293b;
-  --card-border: rgba(255, 255, 255, 0.05);
-  --card-hover-bg: #222f42;
-  --card-hover-border: rgba(255, 255, 255, 0.1);
-
-  /* Soft Accents - Indigo Focus */
-  --primary: #6366f1;
-  --primary-glow: rgba(99, 102, 241, 0.3);
-  --primary-hover: #818cf8;
-  --primary-light: rgba(99, 102, 241, 0.15);
-
-  /* Status Colors */
-  --success: #10b981;
-  --success-glow: rgba(16, 185, 129, 0.2);
-  --success-bg: rgba(16, 185, 129, 0.1);
-  --success-text: #34d399;
-
-  --danger: #f43f5e;
-  --danger-glow: rgba(244, 63, 94, 0.2);
-  --danger-bg: rgba(244, 63, 94, 0.1);
-  --danger-text: #fb7185;
-
-  --warning: #f59e0b;
-  --warning-bg: rgba(245, 158, 11, 0.1);
-  --warning-text: #fbbf24;
-
-  /* Neutrals */
-  --neutral: #94a3b8;
-  --neutral-bg: rgba(255, 255, 255, 0.02);
-  --text-muted: #94a3b8;
-
-  --border: rgba(255, 255, 255, 0.05);
-
-  /* Radius & Shadows */
-  --radius-sm: 12px;
-  --radius: 24px;
-  --radius-lg: 32px;
-
-  --shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.5);
-  --glow: 0 0 20px var(--primary-glow);
-
-  --font-sans: var(--font-nunito), var(--font-inter), system-ui, sans-serif;
-  --font-heading: 'Titan One', cursive;
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-@media (prefers-color-scheme: light) {
-  /* Optional: Light mode override if system is light, but user asked for Dark Dashboard. 
-     I will keep the root as dark to enforce the requested style. 
-     If the user wants system preference, they would have said so. 
-     "Dark dashboard theme (as before)" implies forced dark or default dark.
-  */
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-* {
-  box-sizing: border-box;
-  padding: 0;
-  margin: 0;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
 }
 
 body {
+  background: var(--background);
   color: var(--foreground);
-  background: radial-gradient(circle at 50% -10%, #1a1d23 0%, var(--background) 100%);
-  background-attachment: fixed;
-  font-family: var(--font-sans);
-  line-height: 1.5;
-  -webkit-font-smoothing: antialiased;
-}
-
-h1,
-h2,
-h3,
-h4 {
-  font-family: var(--font-heading);
-  font-weight: 400;
-  /* Rowdies is bold by nature, 400 is usually enough, or 700 */
-  letter-spacing: 0.02em;
-  color: var(--foreground);
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
+  font-family: Arial, Helvetica, sans-serif;
 }
