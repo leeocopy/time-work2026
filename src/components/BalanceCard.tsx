@@ -61,98 +61,86 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         return 0; // Weekend
     };
 
-    const { dailyBalance, monthlyBalance } = useMemo(() => {
+    const { workedToday, requiredToday, remainingToday, monthlyBalance } = useMemo(() => {
         const today = new Date();
         const todayStr = format(today, 'yyyy-MM-dd');
-        const requiredHoursToday = getRequiredHoursForDay(today);
 
-        // --- 1. Daily Balance (Matching user's requested logic) ---
-        const todayEntries = entries
-            .filter((entry) => format(new Date(entry.timestamp), 'yyyy-MM-dd') === todayStr)
-            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+        // 1. Expected Today (Weekly target)
+        const expectedToday = getRequiredHoursForDay(today);
 
-        let workIntervals: { start: number; end: number }[] = [];
-        let lastCheckIn: number | null = null;
-        let lastCheckOutTime: number | null = null;
-        let totalBreakMillis = 0;
-
-        for (const entry of todayEntries) {
-            const entryTime = new Date(entry.timestamp).getTime();
-            if (entry.type === 'CHECK_IN') {
-                if (lastCheckOutTime) {
-                    totalBreakMillis += entryTime - lastCheckOutTime;
-                    lastCheckOutTime = null;
-                }
-                lastCheckIn = entryTime;
-            } else if (entry.type === 'CHECK_OUT' && lastCheckIn) {
-                workIntervals.push({
-                    start: lastCheckIn,
-                    end: entryTime,
-                });
-                lastCheckIn = null;
-                if (entry.reason !== 'End of day') {
-                    lastCheckOutTime = entryTime;
-                }
-            }
-        }
-
-        // If user is currently checked in, calculate work up to now.
-        if (lastCheckIn) {
-            workIntervals.push({ start: lastCheckIn, end: currentTime.getTime() });
-        }
-
-        const totalWorkMillis = workIntervals.reduce(
-            (acc, interval) => acc + (interval.end - interval.start),
-            0
-        );
-
-        const dailyHours = totalWorkMillis / (1000 * 60 * 60);
-        const dailyBal = dailyHours - requiredHoursToday;
-
-        // --- 2. Monthly Cumulative Balance ---
+        // 2. Balance Before Today (Monthly running balance up to yesterday)
         const monthStart = startOfMonth(today);
         const yesterday = endOfYesterday();
-        let carryOverBalance = 0;
+        let balanceBeforeToday = 0;
 
         if (isAfter(yesterday, monthStart) || isSameDay(yesterday, monthStart)) {
-            const daysInMonthSoFar = eachDayOfInterval({ start: monthStart, end: yesterday });
-
-            for (const day of daysInMonthSoFar) {
-                const reqHours = getRequiredHoursForDay(day);
-                if (reqHours === 0) continue;
+            const pastDays = eachDayOfInterval({ start: monthStart, end: yesterday });
+            for (const day of pastDays) {
+                const req = getRequiredHoursForDay(day);
+                if (req === 0) continue;
 
                 const dayStr = format(day, 'yyyy-MM-dd');
                 const dayEntries = entries
-                    .filter((e) => format(new Date(e.timestamp), 'yyyy-MM-dd') === dayStr)
+                    .filter(e => format(new Date(e.timestamp), 'yyyy-MM-dd') === dayStr)
                     .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-                let dayWorkMillis = 0;
-                let dayLastCheckIn: number | null = null;
-
-                for (const entry of dayEntries) {
-                    const entryTime = new Date(entry.timestamp).getTime();
-                    if (entry.type === 'CHECK_IN') {
-                        dayLastCheckIn = entryTime;
-                    } else if (entry.type === 'CHECK_OUT' && dayLastCheckIn) {
-                        dayWorkMillis += entryTime - dayLastCheckIn;
-                        dayLastCheckIn = null;
+                let dayMillis = 0;
+                let lastIn: number | null = null;
+                for (const e of dayEntries) {
+                    const t = new Date(e.timestamp).getTime();
+                    if (e.type === 'CHECK_IN') {
+                        lastIn = t;
+                    } else if (e.type === 'CHECK_OUT' && lastIn) {
+                        dayMillis += t - lastIn;
+                        lastIn = null;
                     }
                 }
-
-                const dayHours = dayWorkMillis / (1000 * 60 * 60);
-                carryOverBalance += (dayHours - reqHours);
+                balanceBeforeToday += (dayMillis / (1000 * 3600)) - req;
             }
         }
 
+        // 3. Worked Today So Far (Live update)
+        const todayEntries = entries
+            .filter(e => format(new Date(e.timestamp), 'yyyy-MM-dd') === todayStr)
+            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
+
+        let workedTodayMillis = 0;
+        let lastInToday: number | null = null;
+        for (const e of todayEntries) {
+            const t = new Date(e.timestamp).getTime();
+            if (e.type === 'CHECK_IN') {
+                lastInToday = t;
+            } else if (e.type === 'CHECK_OUT' && lastInToday) {
+                workedTodayMillis += t - lastInToday;
+                lastInToday = null;
+            }
+        }
+        if (lastInToday) {
+            workedTodayMillis += currentTime.getTime() - lastInToday;
+        }
+        const workedTodayHours = workedTodayMillis / (1000 * 3600);
+
+        // 4. Required Today (Adjusted by carry-over: Point 4)
+        // If I was -1h yesterday, I need expectedToday + 1h today.
+        const requiredWorkedToday = expectedToday - balanceBeforeToday;
+
+        // 5. Remaining Today (Point 5)
+        const remainingTodayHours = requiredWorkedToday - workedTodayHours;
+
+        // 6. Running Monthly Balance (Point 3)
+        const currentMonthlyBalance = balanceBeforeToday + (workedTodayHours - expectedToday);
+
         return {
-            dailyBalance: dailyBal,
-            monthlyBalance: carryOverBalance + dailyBal
+            workedToday: workedTodayHours,
+            requiredToday: requiredWorkedToday,
+            remainingToday: remainingTodayHours,
+            monthlyBalance: currentMonthlyBalance
         };
     }, [entries, currentTime, customHolidays]);
 
-    const formatBalance = (balance: number) => {
-        const isNegative = balance < 0;
-        const absMins = Math.round(Math.abs(balance) * 60);
+    const formatDuration = (hours: number) => {
+        const isNegative = hours < 0;
+        const absMins = Math.round(Math.abs(hours) * 60);
         const h = Math.floor(absMins / 60);
         const m = absMins % 60;
         return {
@@ -161,8 +149,15 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         };
     };
 
-    const daily = formatBalance(dailyBalance);
-    const monthly = formatBalance(monthlyBalance);
+    const formatSimple = (hours: number) => {
+        const absMins = Math.round(Math.abs(hours) * 60);
+        const h = Math.floor(absMins / 60);
+        const m = absMins % 60;
+        return `${h}h ${m}m`;
+    };
+
+    const remaining = formatDuration(remainingToday);
+    const monthly = formatDuration(monthlyBalance);
 
     return (
         <div className="bg-white dark:bg-zinc-900 px-6 py-7 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-sm flex flex-col gap-6">
@@ -172,28 +167,43 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
                     Balance Overview
                 </h3>
                 <p className="text-sm text-zinc-500 dark:text-zinc-400 font-medium italic">
-                    Your work hours balance.
+                    Your live work progress.
                 </p>
             </div>
 
             <div className="space-y-4">
-                {/* Daily Balance Card */}
+                {/* Daily Status Section */}
                 <div className={cn(
-                    "p-6 rounded-2xl flex flex-col items-center gap-1 transition-colors",
-                    daily.isNegative
-                        ? "bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40"
-                        : "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40"
+                    "p-6 rounded-2xl flex flex-col gap-4 transition-colors",
+                    remaining.isNegative
+                        ? "bg-emerald-50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/40"
+                        : "bg-red-50 dark:bg-red-950/20 border border-red-100 dark:border-red-900/40"
                 )}>
-                    <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">Daily Balance</span>
-                    <span className={cn(
-                        "text-4xl font-extrabold tracking-tighter",
-                        daily.isNegative ? "text-red-500" : "text-emerald-500"
-                    )}>
-                        {daily.text}
-                    </span>
+                    <div className="flex flex-col items-center gap-1">
+                        <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">
+                            {remaining.isNegative ? "Surplus reached" : "Remaining Today"}
+                        </span>
+                        <span className={cn(
+                            "text-4xl font-extrabold tracking-tighter",
+                            remaining.isNegative ? "text-emerald-500" : "text-red-500"
+                        )}>
+                            {remaining.isNegative ? formatSimple(Math.abs(remainingToday)) : formatSimple(remainingToday)}
+                        </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2 pt-4 border-t border-zinc-200/50 dark:border-zinc-700/50">
+                        <div className="flex flex-col">
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase">Worked</span>
+                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{formatSimple(workedToday)}</span>
+                        </div>
+                        <div className="flex flex-col items-end">
+                            <span className="text-[10px] font-bold text-zinc-400 uppercase">Required</span>
+                            <span className="text-sm font-bold text-zinc-700 dark:text-zinc-200">{formatSimple(requiredToday)}</span>
+                        </div>
+                    </div>
                 </div>
 
-                {/* Monthly Balance Card */}
+                {/* Monthly Total Section */}
                 <div className={cn(
                     "p-6 rounded-2xl flex flex-col items-center gap-1 transition-colors",
                     monthly.isNegative
@@ -202,7 +212,7 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
                 )}>
                     <span className="text-sm font-bold text-zinc-400 uppercase tracking-tight">Monthly Balance</span>
                     <span className={cn(
-                        "text-4xl font-extrabold tracking-tighter",
+                        "text-2xl font-extrabold tracking-tighter",
                         monthly.isNegative ? "text-red-500" : "text-emerald-500"
                     )}>
                         {monthly.text}
