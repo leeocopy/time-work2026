@@ -17,6 +17,7 @@ import { cn } from '@/lib/utils';
 
 interface BalanceCardProps {
     entries: TimeEntry[];
+    customHolidays: any[];
 }
 
 const PUBLIC_HOLIDAYS_2026 = [
@@ -24,33 +25,27 @@ const PUBLIC_HOLIDAYS_2026 = [
     '2026-05-25', '2026-07-14', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25'
 ];
 
-export default function BalanceCard({ entries }: BalanceCardProps) {
+export default function BalanceCard({ entries, customHolidays }: BalanceCardProps) {
     const [currentTime, setCurrentTime] = useState(new Date());
-    const [customHolidays, setCustomHolidays] = useState<string[]>([]);
 
     useEffect(() => {
         const timer = setInterval(() => setCurrentTime(new Date()), 1000); // Live updates
-
-        // Load custom holidays
-        const saved = localStorage.getItem('custom_holidays');
-        if (saved) {
-            try {
-                const parsed = JSON.parse(saved);
-                setCustomHolidays(parsed.map((h: any) => h.date));
-            } catch (e) {
-                console.error("Failed to parse holidays", e);
-            }
-        }
-
         return () => clearInterval(timer);
     }, []);
 
+    const holidayDates = useMemo(() => {
+        return customHolidays.map(h => h.date);
+    }, [customHolidays]);
+
     const getRequiredHoursForDay = (date: Date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
-        // Check if weekend or Public holiday or Custom Leave/Holiday
-        if (isWeekend(date) || PUBLIC_HOLIDAYS_2026.includes(dateStr) || customHolidays.includes(dateStr)) {
+
+        // Point 2 & 6: Expected hours = 0 if Holiday or Weekend
+        if (isWeekend(date) || PUBLIC_HOLIDAYS_2026.includes(dateStr) || holidayDates.includes(dateStr)) {
             return 0;
         }
+
+        // Point 1: Weekly target
         const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
         if (dayOfWeek >= 1 && dayOfWeek <= 4) {
             return 8.5; // Monday to Thursday
@@ -58,7 +53,7 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
         if (dayOfWeek === 5) {
             return 7.5; // Friday
         }
-        return 0; // Weekend
+        return 0;
     };
 
     const { workedToday, requiredToday, remainingToday, monthlyBalance } = useMemo(() => {
@@ -77,8 +72,6 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
             const pastDays = eachDayOfInterval({ start: monthStart, end: yesterday });
             for (const day of pastDays) {
                 const req = getRequiredHoursForDay(day);
-                if (req === 0) continue;
-
                 const dayStr = format(day, 'yyyy-MM-dd');
                 const dayEntries = entries
                     .filter(e => format(new Date(e.timestamp), 'yyyy-MM-dd') === dayStr)
@@ -95,7 +88,10 @@ export default function BalanceCard({ entries }: BalanceCardProps) {
                         lastIn = null;
                     }
                 }
-                balanceBeforeToday += (dayMillis / (1000 * 3600)) - req;
+
+                const dayHours = dayMillis / (1000 * 3600);
+                // If it's a holiday (req=0), any dayHours is a bonus.
+                balanceBeforeToday += (dayHours - req);
             }
         }
 

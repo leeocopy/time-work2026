@@ -15,6 +15,7 @@ import ProductivityCard from './ProductivityCard';
 import QuoteCard from './QuoteCard';
 import TaskList from './TaskList';
 import { LogOut, User as UserIcon, LayoutDashboard, Database, AlertCircle, CheckCircle } from 'lucide-react';
+import { CustomHoliday } from './HolidayCard';
 
 interface DashboardProps {
     user: any;
@@ -22,7 +23,21 @@ interface DashboardProps {
 
 export default function Dashboard({ user }: DashboardProps) {
     const [entries, setEntries] = useState<TimeEntry[]>([]);
+    const [customHolidays, setCustomHolidays] = useState<CustomHoliday[]>([]);
     const [profileStatus, setProfileStatus] = useState<'loading' | 'ok' | 'missing'>('loading');
+
+    const fetchHolidays = () => {
+        const saved = localStorage.getItem('custom_holidays');
+        if (saved) {
+            try {
+                setCustomHolidays(JSON.parse(saved));
+            } catch (e) {
+                console.error("Failed to parse holidays", e);
+            }
+        } else {
+            setCustomHolidays([]);
+        }
+    };
 
     const fetchEntries = async () => {
         const { data } = await supabase
@@ -51,6 +66,7 @@ export default function Dashboard({ user }: DashboardProps) {
     useEffect(() => {
         fetchEntries();
         checkProfile();
+        fetchHolidays();
     }, [user.id]);
 
     const handleSignOut = async () => {
@@ -112,14 +128,17 @@ export default function Dashboard({ user }: DashboardProps) {
 
                     {/* Right Column - Secondary Info */}
                     <div className="lg:col-span-4 space-y-6">
-                        <BalanceCard entries={entries} />
+                        <BalanceCard entries={entries} customHolidays={customHolidays} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-1 gap-6">
                             <WeatherCard />
                             <QuoteCard />
                         </div>
 
-                        <HolidayCard />
+                        <HolidayCard
+                            customHolidays={customHolidays}
+                            onHolidaysChange={fetchHolidays}
+                        />
                         <PrayerCard />
                     </div>
                 </div>

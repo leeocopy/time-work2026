@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { Calendar, Trash2, Plus } from 'lucide-react';
 import { format } from 'date-fns';
 
-interface CustomHoliday {
+export interface CustomHoliday {
     id: string;
     name: string;
     date: string;
@@ -24,20 +24,19 @@ const PUBLIC_HOLIDAYS_2026 = [
     { date: '2026-12-25', name: 'Noël' },
 ];
 
-export default function HolidayCard() {
-    const [customHolidays, setCustomHolidays] = useState<CustomHoliday[]>([]);
+interface HolidayCardProps {
+    customHolidays: CustomHoliday[];
+    onHolidaysChange: () => void;
+}
+
+export default function HolidayCard({ customHolidays, onHolidaysChange }: HolidayCardProps) {
     const [isAdding, setIsAdding] = useState(false);
     const [newName, setNewName] = useState('');
     const [newDate, setNewDate] = useState('');
 
-    useEffect(() => {
-        const saved = localStorage.getItem('custom_holidays');
-        if (saved) setCustomHolidays(JSON.parse(saved));
-    }, []);
-
     const saveHolidays = (list: CustomHoliday[]) => {
-        setCustomHolidays(list);
         localStorage.setItem('custom_holidays', JSON.stringify(list));
+        onHolidaysChange();
     };
 
     const handleAdd = () => {
