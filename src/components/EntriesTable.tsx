@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { TimeEntry } from '@/lib/types';
 import { format } from 'date-fns';
-import { Trash2, Download, Printer, Database, FileText, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
+import { Trash2, Download, Printer, Database, FileText, Calendar, ChevronUp, ChevronDown, Pencil, X, Save } from 'lucide-react';
 import { supabase } from '@/Supabase/supabase';
 import { cn, formatHours } from '@/lib/utils';
 import jsPDF from 'jspdf';
@@ -18,11 +18,43 @@ interface EntriesTableProps {
 export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }: EntriesTableProps) {
     const [filterDate, setFilterDate] = useState<string>('');
     const [showAll, setShowAll] = useState(false);
+    const [editingEntry, setEditingEntry] = useState<TimeEntry | null>(null);
+    const [editDate, setEditDate] = useState('');
+    const [editReason, setEditReason] = useState('');
+    const [isSaving, setIsSaving] = useState(false);
 
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this entry?')) return;
         const { error } = await supabase.from('time_entries').delete().eq('id', id);
         if (!error) onEntryDeleted();
+    };
+
+    const startEditing = (entry: TimeEntry) => {
+        setEditingEntry(entry);
+        // Format for datetime-local: YYYY-MM-DDTHH:mm
+        const d = new Date(entry.timestamp);
+        const formatted = d.getFullYear() + '-' +
+            String(d.getMonth() + 1).padStart(2, '0') + '-' +
+            String(d.getDate()).padStart(2, '0') + 'T' +
+            String(d.getHours()).padStart(2, '0') + ':' +
+            String(d.getMinutes()).padStart(2, '0');
+        setEditDate(formatted);
+        setEditReason(entry.reason || '');
+    };
+
+    const handleUpdate = async () => {
+        if (!editingEntry) return;
+        setIsSaving(true);
+        const { error } = await supabase.from('time_entries').update({
+            timestamp: new Date(editDate).toISOString(),
+            reason: editReason
+        }).eq('id', editingEntry.id);
+
+        if (!error) {
+            setEditingEntry(null);
+            onEntryUpdated();
+        }
+        setIsSaving(false);
     };
 
     const filteredEntries = filterDate
@@ -128,7 +160,13 @@ export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }
                                                         entry.reason || '— STANDARD'}
                                         </span>
                                     </td>
-                                    <td className="px-8 py-5 text-right">
+                                    <td className="px-8 py-5 text-right flex items-center justify-end gap-2">
+                                        <button
+                                            onClick={() => startEditing(entry)}
+                                            className="p-2 border-2 border-black bg-brand-blue text-white shadow-[3px_3px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
+                                        >
+                                            <Pencil className="w-4 h-4" />
+                                        </button>
                                         <button
                                             onClick={() => handleDelete(entry.id)}
                                             className="p-2 border-2 border-black bg-brand-orange text-white shadow-[3px_3px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
@@ -147,14 +185,65 @@ export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }
                 <div className="p-6 bg-black flex justify-center">
                     <button
                         onClick={() => setShowAll(!showAll)}
-                        className="btn-brutalist bg-brand-yellow text-black border-white shadow-[4px_4px_0px_#fff]"
+                        className="btn-brutalist bg-brand-yellow text-black border-white shadow-[4px_4px_0px_#fff] uppercase text-[10px] tracking-[0.2em]"
                     >
                         {showAll ? (
-                            <>Collapse <ChevronUp className="w-4 h-4" /></>
+                            <>Show Less <ChevronUp className="w-4 h-4 ml-2" /></>
                         ) : (
-                            <>Expand Matrix <ChevronDown className="w-4 h-4" /></>
+                            <>See More <ChevronDown className="w-4 h-4 ml-2" /></>
                         )}
                     </button>
+                </div>
+            )}
+            {/* Edit Modal */}
+            {editingEntry && (
+                <div className="fixed inset-0 z-[110] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+                    <div className="brutalist-card bg-white w-full max-w-md p-8 shadow-[12px_12px_0px_#000]">
+                        <div className="flex justify-between items-center mb-8">
+                            <h3 className="text-xl font-black italic flex items-center gap-3">
+                                <Pencil className="w-6 h-6" />
+                                EDIT ENTRY
+                            </h3>
+                            <button onClick={() => setEditingEntry(null)} className="p-2 bg-brand-orange text-white border-2 border-black shadow-[4px_4px_0px_#000]">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+
+                        <div className="space-y-6">
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-black/40 uppercase tracking-widest block">Timestamp</label>
+                                <input
+                                    type="datetime-local"
+                                    value={editDate}
+                                    onChange={(e) => setEditDate(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-black font-black text-sm outline-none focus:bg-white"
+                                />
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-[10px] font-black text-black/40 uppercase tracking-widest block">Reason / Protocol</label>
+                                <select
+                                    value={editReason}
+                                    onChange={(e) => setEditReason(e.target.value)}
+                                    className="w-full px-4 py-3 bg-slate-50 border-2 border-black font-black text-sm outline-none focus:bg-white cursor-pointer"
+                                >
+                                    <option value="">Standard Protocol</option>
+                                    <option value="End of day">End of day</option>
+                                    <option value="Lunch break">Lunch break</option>
+                                    <option value="Short break">Short break</option>
+                                </select>
+                            </div>
+
+                            <button
+                                onClick={handleUpdate}
+                                disabled={isSaving}
+                                className="btn-brutalist w-full py-4 bg-brand-lime text-black mt-4"
+                            >
+                                <Save className="w-4 h-4" />
+                                {isSaving ? 'UPDATING...' : 'SAVE CHANGES'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
             )}
         </div>
