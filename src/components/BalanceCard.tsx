@@ -110,7 +110,7 @@ export default function BalanceCard({ entries, customHolidays, workGoal }: Balan
     }, [entries, customHolidays, workGoal]);
 
     return (
-        <div className="brutalist-card bg-slush-blue group h-full">
+        <div className="brutalist-card bg-slush-blue group">
             <div className="flex justify-between items-start mb-10">
                 <div className="flex flex-col">
                     <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">

@@ -4,15 +4,20 @@ import { useState, useEffect } from 'react';
 import { Moon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function PrayerCard({ city = 'Marrakech' }: { city?: string }) {
+export default function PrayerCard({ city: initialCity = 'Marrakech' }: { city?: string }) {
+    const [city, setCity] = useState(initialCity);
     const [prayers, setPrayers] = useState<any>(null);
     const [loading, setLoading] = useState(true);
+
+    const cities = ['Marrakech', 'Casablanca', 'Rabat', 'Agadir', 'Tangier', 'Fes', 'Oujda', 'Kenitra'];
 
     useEffect(() => {
         const fetchPrayers = async () => {
             setLoading(true);
             try {
-                const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=Morocco&method=2`);
+                const date = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+                // Method 21 is officially for Morocco (Ministry of Habous)
+                const res = await fetch(`https://api.aladhan.com/v1/timingsByCity/${date}?city=${city}&country=Morocco&method=21`);
                 const data = await res.json();
                 setPrayers(data.data.timings);
             } catch (err) {
@@ -58,9 +63,18 @@ export default function PrayerCard({ city = 'Marrakech' }: { city?: string }) {
                         <Moon className="w-8 h-8" />
                         PRIÈRES
                     </h3>
-                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
-                        Horaires du Jour
-                    </p>
+                    <div className="mt-2 relative">
+                        <select
+                            value={city}
+                            onChange={(e) => setCity(e.target.value)}
+                            className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-3 py-1.5 outline-none border-2 border-black hover:bg-white hover:text-black transition-colors cursor-pointer appearance-none pr-8"
+                        >
+                            {cities.map(c => <option key={c} value={c}>{c}</option>)}
+                        </select>
+                        <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none">
+                            <div className="w-0 h-0 border-l-[4px] border-l-transparent border-r-[4px] border-r-transparent border-t-[4px] border-t-white group-hover:border-t-black" />
+                        </div>
+                    </div>
                 </div>
             </div>
 
@@ -89,7 +103,7 @@ export default function PrayerCard({ city = 'Marrakech' }: { city?: string }) {
 
             <div className="mt-8 pt-6 border-t-4 border-black/10 flex flex-col gap-2">
                 <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/40">Statut Actuel</p>
-                <p className="text-lg font-black text-black italic">Prochaine: {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
+                <p className="text-lg font-black text-black italic text-right">Prochaine: {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
             </div>
         </div>
     );
