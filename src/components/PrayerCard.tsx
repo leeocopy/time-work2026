@@ -1,89 +1,96 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Clock, MapPin } from 'lucide-react';
+import { Moon, Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-export default function PrayerCard() {
-    const [times, setTimes] = useState<any>(null);
-    const [city, setCity] = useState('Marrakech');
+export default function PrayerCard({ city = 'Marrakech' }: { city?: string }) {
+    const [prayers, setPrayers] = useState<any>(null);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const savedCity = localStorage.getItem('prayer_city');
-        if (savedCity) setCity(savedCity);
-    }, []);
-
-    useEffect(() => {
-        const fetchTimes = async () => {
+        const fetchPrayers = async () => {
+            setLoading(true);
             try {
-                const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=Morocco&method=3`);
+                const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=${city}&country=Morocco&method=2`);
                 const data = await res.json();
-                setTimes(data.data.timings);
+                setPrayers(data.data.timings);
             } catch (err) {
                 console.error(err);
             } finally {
                 setLoading(false);
             }
         };
-
-        fetchTimes();
+        fetchPrayers();
     }, [city]);
 
-    const handleCityChange = (newCity: string) => {
-        setCity(newCity);
-        localStorage.setItem('prayer_city', newCity);
+    if (loading) return (
+        <div className="brutalist-card bg-slush-lime group h-full flex flex-col items-center justify-center p-12">
+            <div className="w-12 h-12 border-4 border-black border-t-brand-orange animate-spin"></div>
+        </div>
+    );
+
+    const prayerList = [
+        { name: 'Fajr', time: prayers.Fajr },
+        { name: 'Dhuhr', time: prayers.Dhuhr },
+        { name: 'Asr', time: prayers.Asr },
+        { name: 'Maghrib', time: prayers.Maghrib },
+        { name: 'Isha', time: prayers.Isha },
+    ];
+
+    const getActivePrayer = () => {
+        const now = new Date();
+        const nowStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+        for (let i = prayerList.length - 1; i >= 0; i--) {
+            if (nowStr >= prayerList[i].time) return prayerList[i].name;
+        }
+        return 'Fajr';
     };
 
-    const prayerOrder = ['Fajr', 'Dhuhr', 'Asr', 'Maghrib', 'Isha'];
-    const prayers = prayerOrder.map(name => ({
-        name: name,
-        time: times ? times[name] : '--:--'
-    }));
+    const activePrayer = getActivePrayer();
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-6">
-            <div className="flex justify-between items-center">
-                <div className="flex flex-col gap-1">
-                    <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight transition-colors">
-                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                            <Clock className="w-5 h-5 text-indigo-500" />
-                        </div>
-                        Prayer Schedule
+        <div className="brutalist-card bg-slush-lime group h-full">
+            <div className="flex justify-between items-start mb-10">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
+                        <Moon className="w-8 h-8" />
+                        SPIRITUAL
                     </h3>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10 font-arabic">Al-Adhan • Marrakech</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Prayer Cycle Zone
+                    </p>
                 </div>
-                {/* City selection removed from header as per new layout, but keeping the original logic for now */}
-                {/* <div className="flex items-center gap-1 text-[10px] bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-full font-bold uppercase text-zinc-500">
-                    <MapPin className="w-3 h-3" />
-                    <select
-                        value={city}
-                        onChange={(e) => handleCityChange(e.target.value)}
-                        className="bg-transparent border-none outline-none cursor-pointer"
-                    >
-                        <option value="Marrakech">Marrakech</option>
-                        <option value="Casablanca">Casablanca</option>
-                        <option value="Rabat">Rabat</option>
-                    </select>
-                </div> */}
             </div>
 
-            {loading ? (
-                <div className="space-y-3 animate-pulse">
-                    {[1, 2, 3, 4, 5].map(i => (
-                        <div key={i} className="h-14 bg-zinc-100 dark:bg-zinc-800 rounded-2xl"></div>
-                    ))}
-                </div>
-            ) : (
-                <div className="space-y-2">
-                    {prayerOrder.map(name => (
-                        <div key={name} className="flex justify-between items-center p-2.5 rounded-xl hover:bg-indigo-50/50 dark:hover:bg-indigo-900/10 transition-colors">
-                            <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200">{name}</span>
-                            <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400">{times[name]}</span>
+            <div className="space-y-3">
+                {prayerList.map((p) => {
+                    const isActive = p.name === activePrayer;
+                    return (
+                        <div
+                            key={p.name}
+                            className={cn(
+                                "flex items-center justify-between p-4 border-2 border-black transition-all",
+                                isActive
+                                    ? "bg-black text-white scale-105 shadow-[6px_6px_0px_#fff] -rotate-1"
+                                    : "bg-white text-black"
+                            )}
+                        >
+                            <div className="flex items-center gap-3">
+                                <Clock className={cn("w-4 h-4", isActive ? "text-brand-yellow" : "text-black/20")} />
+                                <span className="text-xs font-black uppercase tracking-widest">{p.name}</span>
+                            </div>
+                            <span className="text-sm font-black tabular-nums">{p.time}</span>
                         </div>
-                    ))}
-                </div>
-            )}
+                    );
+                })}
+            </div>
+
+            <div className="mt-8 pt-6 border-t-4 border-black/10 flex flex-col gap-2">
+                <p className="text-[9px] font-black uppercase tracking-[0.2em] text-black/40">Current Alignment</p>
+                <p className="text-lg font-black text-black italic">Wait for {prayerList[(prayerList.findIndex(p => p.name === activePrayer) + 1) % 5].name}</p>
+            </div>
         </div>
     );
 }

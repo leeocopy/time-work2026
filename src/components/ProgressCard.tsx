@@ -1,123 +1,137 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { Activity } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
+import { formatHours } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 import { TimeEntry } from '@/lib/types';
-import { differenceInMinutes, startOfDay, endOfDay, isWithinInterval } from 'date-fns';
+import { isToday, startOfToday } from 'date-fns';
 
 interface ProgressCardProps {
     entries: TimeEntry[];
+    workGoal: number;
 }
 
-export default function ProgressCard({ entries }: ProgressCardProps) {
-    const [mounted, setMounted] = useState(false);
-    const [currentTime, setCurrentTime] = useState(new Date());
+export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
+    const calculateStats = () => {
+        const today = startOfToday();
+        const todayEntries = entries.filter(e => isToday(new Date(e.timestamp)));
 
-    useEffect(() => {
-        setMounted(true);
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000);
-        return () => clearInterval(timer);
-    }, []);
+        let worked = 0;
+        let lastIn: Date | null = null;
 
-    const stats = useMemo(() => {
-        if (!mounted) return { worked: 0, breaks: 0, remaining: 0, pct: '0.0' };
-        const today = new Date();
-        const start = startOfDay(today);
-        const end = endOfDay(today);
+        const sorted = [...todayEntries].sort((a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        );
 
-        // Filter today's entries
-        const todayEntries = entries
-            .filter(e => isWithinInterval(new Date(e.timestamp), { start, end }))
-            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-        let workedMinutes = 0;
-        let breakMinutes = 0;
-        const goalMinutes = 8.5 * 60; // 8.5 hours goal
-
-        for (let i = 0; i < todayEntries.length; i++) {
-            const current = todayEntries[i];
-            const next = todayEntries[i + 1];
-
-            if (current.type === 'CHECK_IN') {
-                const endTime = next ? new Date(next.timestamp) : currentTime;
-                workedMinutes += differenceInMinutes(endTime, new Date(current.timestamp));
-            } else if (current.type === 'CHECK_OUT' && current.reason !== 'End of day') {
-                const endTime = next ? new Date(next.timestamp) : currentTime;
-                breakMinutes += differenceInMinutes(endTime, new Date(current.timestamp));
+        sorted.forEach(entry => {
+            if (entry.type === 'CHECK_IN') {
+                lastIn = new Date(entry.timestamp);
+            } else if (entry.type === 'CHECK_OUT' && lastIn) {
+                worked += (new Date(entry.timestamp).getTime() - lastIn.getTime()) / 1000;
+                lastIn = null;
             }
+        });
+
+        // Add live time if currently checked in
+        const lastEntry = sorted[sorted.length - 1];
+        if (lastEntry?.type === 'CHECK_IN') {
+            worked += (new Date().getTime() - new Date(lastEntry.timestamp).getTime()) / 1000;
         }
 
-        const remainingMinutes = Math.max(0, goalMinutes - workedMinutes);
+        const goalSeconds = workGoal * 3600;
+        const pct = (worked / goalSeconds) * 100;
 
         return {
-            worked: workedMinutes,
-            breaks: breakMinutes,
-            remaining: remainingMinutes,
-            pct: Math.min(100, (workedMinutes / goalMinutes) * 100).toFixed(1)
+            worked,
+            pct: Math.min(Math.round(pct), 100),
+            remaining: Math.max(goalSeconds - worked, 0),
+            isGoalReached: worked >= goalSeconds
         };
-    }, [entries, mounted, currentTime]);
-
-    const data = [
-        { name: 'Worked', value: stats.worked, color: '#4f46e5' },
-        { name: 'Breaks', value: stats.breaks, color: '#f59e0b' },
-        { name: 'Remaining', value: stats.remaining, color: '#e4e4e7' }
-    ];
-
-    const formatHours = (mins: number) => {
-        const h = Math.floor(mins / 60);
-        const m = mins % 60;
-        return `${h}h ${m}m`;
     };
 
+    const stats = calculateStats();
+    const data = [
+        { name: 'Worked', value: stats.worked },
+        { name: 'Remaining', value: stats.remaining }
+    ];
+
+    const COLORS = ['#BCFF00', 'rgba(255, 255, 255, 0.1)'];
+
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col items-center">
-            <h3 className="text-xl font-bold mb-6 w-full tracking-tight">Today's Progress</h3>
-
-            <div className="w-full h-56 relative mb-6">
-                <ResponsiveContainer width="100%" height="100%">
-                    <PieChart>
-                        <Pie
-                            data={data}
-                            innerRadius={70}
-                            outerRadius={90}
-                            paddingAngle={8}
-                            dataKey="value"
-                            startAngle={90}
-                            endAngle={-270}
-                            stroke="none"
-                        >
-                            {data.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={entry.color} />
-                            ))}
-                        </Pie>
-                    </PieChart>
-                </ResponsiveContainer>
-                <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                    <span className="text-4xl font-black tracking-tighter text-indigo-600 dark:text-indigo-400">{stats.pct}%</span>
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mt-1">Daily Cap</span>
-                </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 w-full">
-                <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">Worked</p>
-                    <p className="text-xl font-black text-indigo-600 dark:text-indigo-400">{formatHours(stats.worked)}</p>
-                </div>
-                <div className="p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest mb-1 leading-none">Breaks</p>
-                    <p className="text-xl font-black text-amber-500">{formatHours(stats.breaks)}</p>
-                </div>
-            </div>
-
-            <div className="mt-8 w-full pt-6 border-t border-zinc-200/50 dark:border-white/5 flex justify-between items-center">
+        <div className="brutalist-card bg-slush-purple group h-full">
+            <div className="flex justify-between items-start mb-8">
                 <div className="flex flex-col">
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Net Status</span>
-                    <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400 mt-1">Daily Balance</span>
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
+                        <Activity className="w-8 h-8" />
+                        LIVE METRICS
+                    </h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-2 py-0.5 inline-block w-fit mt-1">
+                        Node Capacity: {workGoal}H
+                    </p>
                 </div>
-                <div className="flex flex-col items-end">
-                    <span className={`text-sm font-black tracking-tight ${stats.worked >= (8.5 * 60) ? 'text-emerald-500' : 'text-rose-500'}`}>
-                        {stats.worked >= (8.5 * 60) ? 'GOAL ACHIEVED 🎉' : `-${formatHours(stats.remaining)}`}
-                    </span>
+                <div className={cn(
+                    "btn-brutalist py-1 px-4 text-xs transition-colors",
+                    stats.isGoalReached ? "bg-brand-lime text-black border-white" : "bg-black text-white"
+                )}>
+                    {stats.isGoalReached ? 'MAXED' : 'OPTIMIZING'}
+                </div>
+            </div>
+
+            <div className="flex flex-col items-center gap-10">
+                <div className="relative w-44 h-44 bg-white border-4 border-black p-2 shadow-[8px_8px_0px_#000] flex-shrink-0 -rotate-1">
+                    <ResponsiveContainer width="100%" height="100%">
+                        <PieChart>
+                            <Pie
+                                data={data}
+                                cx="50%"
+                                cy="50%"
+                                innerRadius={45}
+                                outerRadius={65}
+                                paddingAngle={0}
+                                dataKey="value"
+                                stroke="none"
+                                isAnimationActive={false}
+                            >
+                                {data.map((_, index) => (
+                                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                ))}
+                            </Pie>
+                        </PieChart>
+                    </ResponsiveContainer>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                        <span className="text-3xl font-black text-black leading-none">{stats.pct}%</span>
+                        <span className="text-[8px] font-black uppercase text-black/40">LOAD</span>
+                    </div>
+                </div>
+
+                <div className="flex-1 w-full flex flex-col gap-4">
+                    <div className="bg-black text-white p-4 border-2 border-white/20 shadow-[4px_4px_0px_rgba(0,0,0,0.5)]">
+                        <div className="flex justify-between items-center">
+                            <div>
+                                <p className="text-[9px] font-black uppercase tracking-widest text-brand-mint">Engaged</p>
+                                <p className="text-2xl font-black tabular-nums">{formatHours(stats.worked)}</p>
+                            </div>
+                            <div className="text-right">
+                                <p className="text-[9px] font-black uppercase tracking-widest text-white/40">Pending</p>
+                                <p className="text-lg font-black tabular-nums text-white/60">{formatHours(stats.remaining)}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-white/10 border-2 border-white/10 p-2.5">
+                            <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Sync Status</p>
+                            <div className="flex items-center gap-1.5 mt-0.5">
+                                <div className={cn("w-1.5 h-1.5 rounded-full", stats.isGoalReached ? "bg-brand-lime" : "bg-brand-yellow")} />
+                                <span className="text-[9px] font-black text-white uppercase">{stats.isGoalReached ? 'Max' : 'Active'}</span>
+                            </div>
+                        </div>
+                        <div className="bg-white/10 border-2 border-white/10 p-2.5">
+                            <p className="text-[7px] font-black uppercase tracking-widest text-white/40">Ecliptic Flux</p>
+                            <p className="text-[9px] font-black text-white uppercase mt-0.5">Quantum</p>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>

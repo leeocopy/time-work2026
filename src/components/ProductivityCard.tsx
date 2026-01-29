@@ -1,7 +1,7 @@
 'use client';
 
 import { useMemo } from 'react';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
+import { BarChart, Bar, XAxis, Tooltip, ResponsiveContainer } from 'recharts';
 import { TimeEntry } from '@/lib/types';
 import { startOfWeek, endOfWeek, eachDayOfInterval, isSameDay, differenceInMinutes, format } from 'date-fns';
 import { Trophy, Zap, BarChart3 } from 'lucide-react';
@@ -40,72 +40,66 @@ export default function ProductivityCard({ entries }: ProductivityCardProps) {
     }, [entries]);
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-8">
-            <div className="flex flex-col gap-1">
-                <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight transition-colors font-display">
-                    <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                        <BarChart3 className="w-5 h-5 text-indigo-500" />
-                    </div>
-                    Productivity Heatmap
-                </h3>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10">Last 7 Sessions</p>
+        <div className="brutalist-card bg-white group">
+            <div className="flex justify-between items-start mb-8">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
+                        <BarChart3 className="w-8 h-8" />
+                        PRODUCTIVITY HEATMAP
+                    </h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Last 7 Sessions
+                    </p>
+                </div>
             </div>
 
-            <div className="h-56 w-full -ml-4">
+            <div className="h-64 w-full bg-slate-50 border-2 border-black p-4 mb-8">
                 <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
                         <XAxis
                             dataKey="day"
                             axisLine={false}
                             tickLine={false}
-                            tick={{ fill: '#a1a1aa', fontSize: 10, fontWeight: 800 }}
+                            tick={{ fill: '#000', fontSize: 10, fontWeight: 900 }}
                         />
                         <Tooltip
+                            cursor={{ fill: 'rgba(0,0,0,0.05)' }}
                             contentStyle={{
-                                backgroundColor: 'var(--card)',
-                                border: '1px solid var(--card-border)',
-                                borderRadius: '12px',
-                                fontSize: '12px',
-                                fontWeight: 'bold'
+                                backgroundColor: '#000',
+                                border: 'none',
+                                color: '#fff',
+                                fontWeight: '900',
+                                fontSize: '10px',
+                                textTransform: 'uppercase'
                             }}
                         />
                         <Bar
                             dataKey="hours"
-                            fill="url(#colorIndigo)"
-                            radius={[6, 6, 0, 0]}
-                            barSize={32}
+                            fill="#BCFF00"
+                            stroke="#000"
+                            strokeWidth={2}
                         />
-                        <defs>
-                            <linearGradient id="colorIndigo" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="5%" stopColor="#6366f1" stopOpacity={0.8} />
-                                <stop offset="95%" stopColor="#6366f1" stopOpacity={0.1} />
-                            </linearGradient>
-                        </defs>
                     </BarChart>
                 </ResponsiveContainer>
             </div>
-            <div className="pt-6 border-t border-zinc-200/50 dark:border-white/5">
-                <div className="flex flex-col gap-4">
-                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-1">Career Achievements</h4>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                        <div className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5">
-                            <div className="w-10 h-10 bg-amber-500/10 rounded-xl flex items-center justify-center">
-                                <Zap className="w-5 h-5 text-amber-500" />
-                            </div>
-                            <div className="flex flex-col">
-                                <p className="text-xs font-black text-zinc-800 dark:text-zinc-100">Consistency King</p>
-                                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">5 day streak</p>
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-3 p-4 bg-zinc-50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5 hover:border-indigo-500/30 transition-all">
-                            <div className="w-10 h-10 bg-indigo-500/10 rounded-xl flex items-center justify-center">
-                                <Trophy className="w-5 h-5 text-indigo-500" />
-                            </div>
-                            <div className="flex flex-col">
-                                <p className="text-xs font-black text-zinc-800 dark:text-zinc-100">Deep Work Master</p>
-                                <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-tight">42 total hours</p>
-                            </div>
-                        </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="flex items-center gap-4 p-4 border-2 border-black bg-brand-yellow shadow-[4px_4px_0px_#000]">
+                    <div className="w-12 h-12 bg-black border-2 border-white flex items-center justify-center rotate-3">
+                        <Zap className="w-6 h-6 text-brand-yellow" />
+                    </div>
+                    <div className="flex flex-col">
+                        <p className="text-xs font-black uppercase">Consistency King</p>
+                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest">5 day streak</p>
+                    </div>
+                </div>
+                <div className="flex items-center gap-4 p-4 border-2 border-black bg-brand-blue shadow-[4px_4px_0px_#000]">
+                    <div className="w-12 h-12 bg-black border-2 border-white flex items-center justify-center -rotate-3">
+                        <Trophy className="w-6 h-6 text-brand-blue" />
+                    </div>
+                    <div className="flex flex-col text-white">
+                        <p className="text-xs font-black uppercase">Deep Work Master</p>
+                        <p className="text-[9px] font-black text-white/40 uppercase tracking-widest">42 total hours</p>
                     </div>
                 </div>
             </div>

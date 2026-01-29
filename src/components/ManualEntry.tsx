@@ -35,23 +35,25 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
     };
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-6">
-            <div className="flex flex-col gap-1">
-                <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight transition-colors">
-                    <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                        <PlusCircle className="w-5 h-5 text-indigo-500" />
-                    </div>
-                    Retroactive Log
-                </h3>
-                <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10">Manual Adjustment</p>
+        <div className="brutalist-card bg-white group">
+            <div className="flex justify-between items-start mb-8">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
+                        <PlusCircle className="w-8 h-8" />
+                        RETROACTIVE LOG
+                    </h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Manual Adjustment
+                    </p>
+                </div>
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="space-y-2">
-                    <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1 text-center block">Temporal Target</label>
+                    <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] block">Temporal Target</label>
                     <input
                         type="datetime-local"
-                        className="w-full px-5 py-4 rounded-2xl border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-bold transition-all"
+                        className="w-full px-5 py-4 bg-slate-50 border-2 border-black outline-none text-xs font-black uppercase transition-all focus:bg-white"
                         value={date}
                         onChange={(e) => setDate(e.target.value)}
                         required
@@ -60,9 +62,9 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-2">
-                        <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1 text-center block">Type</label>
+                        <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] block">Type</label>
                         <select
-                            className="w-full px-5 py-4 rounded-2xl border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-black transition-all appearance-none cursor-pointer"
+                            className="w-full px-5 py-4 bg-slate-50 border-2 border-black outline-none text-xs font-black uppercase transition-all focus:bg-white cursor-pointer"
                             value={type}
                             onChange={(e) => setType(e.target.value as any)}
                         >
@@ -72,9 +74,9 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
                     </div>
                     {type === 'CHECK_OUT' && (
                         <div className="space-y-2">
-                            <label className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] pl-1 text-center block">Condition</label>
+                            <label className="text-[10px] font-black text-black/40 uppercase tracking-[0.2em] block">Condition</label>
                             <select
-                                className="w-full px-5 py-4 rounded-2xl border border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-black/20 focus:ring-2 focus:ring-indigo-500 outline-none text-xs font-black transition-all appearance-none cursor-pointer"
+                                className="w-full px-5 py-4 bg-slate-50 border-2 border-black outline-none text-xs font-black uppercase transition-all focus:bg-white cursor-pointer"
                                 value={reason}
                                 onChange={(e) => setReason(e.target.value)}
                             >
@@ -89,7 +91,7 @@ export default function ManualEntry({ user, onEntryAdded }: ManualEntryProps) {
                 <button
                     type="submit"
                     disabled={loading}
-                    className="w-full py-5 bg-indigo-600 text-white rounded-2xl font-black text-[10px] uppercase tracking-[0.3em] hover:bg-indigo-700 hover:shadow-xl hover:shadow-indigo-500/20 transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
+                    className="btn-brutalist w-full py-5 bg-brand-blue text-white"
                 >
                     {loading ? 'Processing...' : 'Synchronize Record'}
                 </button>

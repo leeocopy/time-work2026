@@ -15,16 +15,23 @@ export default function AyahCard() {
     if (!ayah) return null;
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] text-white shadow-xl shadow-emerald-500/10 relative overflow-hidden group min-h-[160px] flex flex-col justify-center bg-gradient-to-br from-emerald-600 to-teal-700 border-none">
-            <BookOpen className="absolute -top-4 -right-4 w-24 h-24 text-white/10 group-hover:rotate-12 transition-transform duration-700" />
-            <div className="relative z-10">
-                <p className="text-2xl font-bold text-right mb-6 leading-[1.8] font-arabic drop-shadow-md" dir="rtl">
+        <div className="brutalist-card bg-brand-lime group">
+            <div className="flex justify-between items-start mb-6">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
+                        <BookOpen className="w-8 h-8" />
+                        SPIRITUAL BEACON
+                    </h3>
+                </div>
+            </div>
+
+            <div className="bg-black text-white p-6 border-4 border-white shadow-[8px_8px_0px_#000] -rotate-1 group-hover:rotate-0 transition-transform">
+                <p className="text-xl font-bold text-center leading-[1.8] font-arabic mb-4" dir="rtl">
                     {ayah.text}
                 </p>
-                <div className="flex items-center gap-3 justify-end">
-                    <span className="w-10 h-px bg-white/30"></span>
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-emerald-100/80">
-                        سورة {ayah.surah}
+                <div className="flex items-center gap-3 justify-center">
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-lime">
+                        Surah {ayah.surah}
                     </span>
                 </div>
             </div>

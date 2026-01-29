@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Calendar, Trash2, Plus } from 'lucide-react';
+import { useState } from 'react';
+import { Calendar, Trash2, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
+import { cn } from '@/lib/utils';
 
 export interface CustomHoliday {
     id: string;
@@ -53,96 +54,94 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
     };
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col">
-            <div className="flex justify-between items-center mb-8">
-                <div className="flex flex-col gap-1">
-                    <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight transition-colors">
-                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                            <Calendar className="w-5 h-5 text-indigo-500" />
-                        </div>
-                        Holidays & Leave
+        <div className="brutalist-card bg-white group">
+            <div className="flex justify-between items-start mb-8">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
+                        <Calendar className="w-8 h-8" />
+                        HOLIDAYS & LEAVE
                     </h3>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10">Calendar Overview</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Calendar Overview
+                    </p>
                 </div>
                 <button
-                    onClick={() => setIsAdding(true)}
-                    className="p-2.5 bg-indigo-50 dark:bg-indigo-900/20 text-indigo-600 dark:text-indigo-400 rounded-xl hover:bg-indigo-100 transition-all active:scale-90"
+                    onClick={() => setIsAdding(!isAdding)}
+                    className="p-3 bg-brand-blue text-white border-2 border-black shadow-[4px_4px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
                 >
-                    <Plus className="w-5 h-5" />
+                    {isAdding ? <X className="w-5 h-5" /> : <Plus className="w-5 h-5" />}
                 </button>
             </div>
 
             {isAdding && (
-                <div className="mb-8 p-6 bg-zinc-50 dark:bg-black/20 rounded-2xl border border-zinc-100 dark:border-white/5 space-y-4 animate-in fade-in slide-in-from-top-4 duration-300">
-                    <div className="grid grid-cols-1 gap-4">
-                        <input
-                            type="text"
-                            placeholder="Holiday Name (e.g. Sickness)"
-                            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                            value={newName}
-                            onChange={(e) => setNewName(e.target.value)}
-                        />
-                        <input
-                            type="date"
-                            className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
-                            value={newDate}
-                            onChange={(e) => setNewDate(e.target.value)}
-                        />
+                <div className="mb-10 p-6 bg-slate-50 border-4 border-black shadow-[6px_6px_0px_#000] space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="space-y-4">
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase text-black/40">Identifier</label>
+                            <input
+                                type="text"
+                                placeholder="E.G. SICKNESS"
+                                className="w-full bg-white border-2 border-black px-4 py-3 text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
+                                value={newName}
+                                onChange={(e) => setNewName(e.target.value)}
+                            />
+                        </div>
+                        <div className="space-y-1">
+                            <label className="text-[9px] font-black uppercase text-black/40">Target Date</label>
+                            <input
+                                type="date"
+                                className="w-full bg-white border-2 border-black px-4 py-3 text-xs font-black uppercase outline-none focus:bg-brand-mint/10"
+                                value={newDate}
+                                onChange={(e) => setNewDate(e.target.value)}
+                            />
+                        </div>
                     </div>
-                    <div className="flex gap-3">
-                        <button
-                            onClick={addHoliday}
-                            className="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl hover:bg-indigo-700 transition-all active:scale-95"
-                        >
-                            Save Leave
-                        </button>
-                        <button
-                            onClick={() => setIsAdding(false)}
-                            className="px-6 py-3 text-zinc-500 font-bold hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-xl transition-all"
-                        >
-                            Cancel
-                        </button>
-                    </div>
+                    <button
+                        onClick={addHoliday}
+                        className="btn-brutalist w-full py-4 bg-black text-white"
+                    >
+                        Save Leave
+                    </button>
                 </div>
             )}
 
-            <div className="space-y-10 overflow-y-auto pr-2 scrollbar-thin scrollbar-thumb-zinc-200 dark:scrollbar-thumb-zinc-800">
+            <div className="space-y-8 overflow-y-auto max-h-[500px] pr-2 scrollbar-thin">
                 <section>
-                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full" />
-                        Custom Holidays
+                    <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-brand-blue border-1 border-black" />
+                        Custom Entries
                     </h4>
                     <div className="space-y-3">
                         {customHolidays.map(h => (
-                            <div key={h.id} className="group flex justify-between items-center p-4 bg-zinc-50/50 dark:bg-white/5 rounded-2xl border border-zinc-100 dark:border-white/5 hover:border-indigo-500/30 transition-all">
+                            <div key={h.id} className="flex justify-between items-center p-4 bg-white border-2 border-black shadow-[4px_4px_0px_#000]">
                                 <div className="flex flex-col">
-                                    <span className="text-sm font-bold text-zinc-800 dark:text-zinc-200">{h.name}</span>
-                                    <span className="text-[10px] font-mono font-bold text-zinc-400">{format(new Date(h.date), 'MMM dd, yyyy')}</span>
+                                    <span className="text-xs font-black uppercase italic">{h.name}</span>
+                                    <span className="text-[10px] font-black text-black/40 tabular-nums uppercase">{format(new Date(h.date), 'MMM dd, yyyy')}</span>
                                 </div>
                                 <button
                                     onClick={() => deleteHoliday(h.id)}
-                                    className="p-2 text-zinc-400 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-all"
+                                    className="p-2 bg-brand-orange text-white border-2 border-black shadow-[2px_2px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
                                 >
                                     <Trash2 className="w-4 h-4" />
                                 </button>
                             </div>
                         ))}
                         {customHolidays.length === 0 && (
-                            <p className="text-xs text-zinc-400 italic font-medium py-2">No custom leaves added.</p>
+                            <p className="text-[10px] font-black text-black/20 uppercase italic py-2">No custom leaves added.</p>
                         )}
                     </div>
                 </section>
 
                 <section>
-                    <h4 className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />
+                    <h4 className="text-[10px] font-black text-black uppercase tracking-[0.2em] mb-4 flex items-center gap-2">
+                        <span className="w-2 h-2 bg-brand-yellow border-1 border-black" />
                         Public (2026)
                     </h4>
                     <div className="space-y-2">
                         {PUBLIC_HOLIDAYS_2026.map(h => (
-                            <div key={h.name} className="flex justify-between items-center p-3.5 rounded-xl hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors">
-                                <span className="text-xs font-bold text-zinc-600 dark:text-zinc-400">{h.name}</span>
-                                <span className="text-[10px] font-mono font-black text-zinc-400 bg-zinc-100 dark:bg-white/5 px-2 py-1 rounded-md">{h.date}</span>
+                            <div key={h.name} className="flex justify-between items-center p-4 bg-slate-50 border-1 border-black/10 hover:bg-white hover:border-black transition-all group">
+                                <span className="text-[11px] font-black text-black/60 group-hover:text-black uppercase italic">{h.name}</span>
+                                <span className="text-[10px] font-black text-black/40 tabular-nums uppercase">{h.date}</span>
                             </div>
                         ))}
                     </div>

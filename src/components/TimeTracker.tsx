@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/Supabase/supabase';
 import { Play, Square, Coffee, Utensils, Clock } from 'lucide-react';
 import { TimeEntry } from '@/lib/types';
+import { cn } from '@/lib/utils';
 
 interface TimeTrackerProps {
     user: any;
@@ -52,88 +53,102 @@ export default function TimeTracker({ user, onEntryAdded }: TimeTrackerProps) {
     };
 
     const isWorking = lastEntry?.type === 'CHECK_IN';
+    const isOnBreak = lastEntry?.type === 'CHECK_OUT' && (lastEntry.reason === 'Short break' || lastEntry.reason === 'Lunch break');
+
+    const getElapsedTime = (timestamp: string) => {
+        const diff = currentTime.getTime() - new Date(timestamp).getTime();
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        const s = Math.floor((diff % 60000) / 1000);
+        return `${h > 0 ? h + 'h ' : ''}${m}m ${s}s`;
+    };
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] flex flex-col gap-8 relative overflow-hidden">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/5 rounded-full blur-3xl -mr-16 -mt-16" />
-
-            <div className="flex justify-between items-center relative z-10">
-                <div className="flex flex-col gap-1">
-                    <h3 className="text-xl font-bold flex items-center gap-2 tracking-tight">
-                        <div className="p-1.5 bg-indigo-500/10 rounded-lg">
-                            <Clock className="w-5 h-5 text-indigo-500" />
-                        </div>
-                        Time Tracker
+        <div className="brutalist-card bg-slush-mint group">
+            <div className="flex justify-between items-start mb-10">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3">
+                        <Clock className="w-8 h-8" />
+                        NODE MATRIX
                     </h3>
-                    <p className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-10">Live Analytics</p>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Quantum Flux Sync
+                    </p>
                 </div>
-                <div className="px-4 py-2 bg-zinc-100 dark:bg-white/5 rounded-xl border border-zinc-200 dark:border-white/10 shadow-inner">
-                    <span className="text-2xl font-black font-mono tracking-tighter text-indigo-600 dark:text-indigo-400">
+                <div className="btn-brutalist bg-white py-1 px-3">
+                    <span className="text-xl font-black font-mono">
                         {mounted ? currentTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--'}
                     </span>
                 </div>
             </div>
 
-            <div className="flex flex-col items-center gap-8 relative z-10">
+            <div className="flex flex-col items-center gap-12">
                 {!isWorking ? (
-                    <div className="relative group">
-                        <div className="absolute inset-0 bg-indigo-600 rounded-full blur-2xl opacity-20 group-hover:opacity-40 transition-opacity animate-pulse" />
+                    <div className="flex flex-col items-center gap-10">
                         <button
                             onClick={() => handleAction('CHECK_IN')}
                             disabled={loading}
-                            className="relative w-40 h-40 rounded-full bg-gradient-to-br from-indigo-500 to-indigo-700 text-white flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-2xl shadow-indigo-500/40 disabled:opacity-50 border-4 border-white/10"
+                            className="relative w-48 h-48 rounded-full bg-black text-white border-4 border-white flex flex-col items-center justify-center gap-2 transition-all hover:scale-105 active:scale-95 shadow-[8px_8px_0px_#fff] disabled:opacity-50"
                         >
-                            <Play className="w-12 h-12 fill-current drop-shadow-lg" />
-                            <span className="font-black uppercase tracking-widest text-xs">Check In</span>
+                            <Play className="w-16 h-16 fill-brand-lime" />
+                            <span className="font-black uppercase tracking-[0.2em] text-[10px]">AUTH ACCESS</span>
                         </button>
+
+                        {isOnBreak && (
+                            <div className="bg-brand-orange border-2 border-black p-3 shadow-[4px_4px_0px_#000] rotate-1 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                                <span className="text-[10px] font-black uppercase tracking-widest flex items-center gap-2">
+                                    <span className="w-2 h-2 rounded-full bg-black animate-ping" />
+                                    ACTIVE BREAK: {getElapsedTime(lastEntry!.timestamp)}
+                                </span>
+                            </div>
+                        )}
                     </div>
                 ) : (
-                    <div className="flex flex-col items-center gap-6">
-                        <div className="relative flex items-center justify-center w-24 h-24 mb-2">
-                            <div className="absolute inset-0 bg-indigo-500/20 rounded-full animate-ping" />
-                            <div className="absolute inset-2 bg-indigo-500/40 rounded-full animate-pulse" />
-                            <div className="relative w-16 h-16 bg-indigo-600 rounded-full flex items-center justify-center shadow-lg">
-                                <Clock className="w-8 h-8 text-white animate-spin-slow" />
-                            </div>
+                    <div className="flex flex-col items-center w-full gap-10">
+                        <div className="bg-white border-4 border-black p-10 shadow-[10px_10px_0px_#000] w-full text-center -rotate-1">
+                            <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-2">Pulse Rate</span>
+                            <span className="text-6xl font-black text-black tracking-tighter tabular-nums">
+                                {getElapsedTime(lastEntry!.timestamp)}
+                            </span>
                         </div>
 
-                        <div className="flex flex-wrap justify-center gap-3">
+                        <div className="flex flex-wrap justify-center gap-4">
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'End of day')}
                                 disabled={loading}
-                                className="px-6 py-3 rounded-2xl bg-rose-500 text-white font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:bg-rose-600 hover:shadow-lg hover:shadow-rose-500/30 transition-all active:scale-95 disabled:opacity-50"
+                                className="btn-brutalist bg-black text-white px-10 py-4 text-xs"
                             >
-                                <Square className="w-4 h-4 fill-current" />
-                                End Day
+                                <Square className="w-4 h-4 fill-brand-orange" />
+                                TERMINATE
                             </button>
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'Lunch break')}
                                 disabled={loading}
-                                className="px-6 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:border-orange-500/50 hover:text-orange-500 transition-all active:scale-95 disabled:opacity-50"
+                                className="btn-brutalist bg-brand-yellow text-black px-8 py-4 text-xs"
                             >
                                 <Utensils className="w-4 h-4" />
-                                Lunch
+                                REFUEL
                             </button>
                             <button
                                 onClick={() => handleAction('CHECK_OUT', 'Short break')}
                                 disabled={loading}
-                                className="px-6 py-3 rounded-2xl bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 font-black text-[10px] uppercase tracking-widest flex items-center gap-2 hover:border-amber-500/50 hover:text-amber-500 transition-all active:scale-95 disabled:opacity-50"
+                                className="btn-brutalist bg-brand-blue text-white px-8 py-4 text-xs"
                             >
                                 <Coffee className="w-4 h-4" />
-                                Break
+                                RECAL
                             </button>
                         </div>
                     </div>
                 )}
 
                 {lastEntry && (
-                    <div className="px-4 py-2 bg-zinc-50 dark:bg-black/20 rounded-full border border-zinc-100 dark:border-white/5">
-                        <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest">
-                            {lastEntry.type === 'CHECK_IN' ? 'Active session started at' : `Last break (${lastEntry.reason}) at`}
-                            <span className="ml-2 text-zinc-800 dark:text-zinc-200 font-black">
-                                {mounted ? new Date(lastEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
-                            </span>
+                    <div className="mt-8 bg-black/10 border-t-2 border-black/20 w-full pt-4 flex items-center justify-between">
+                        <p className="text-[10px] font-black uppercase tracking-widest opacity-60">
+                            {isWorking ? 'Session Start' : `Last Jump (${lastEntry.reason})`}
                         </p>
+                        <span className="text-xs font-black bg-black text-white px-2 py-0.5">
+                            {mounted ? new Date(lastEntry.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '--:--'}
+                        </span>
                     </div>
                 )}
             </div>

@@ -1,66 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@800&family=Archivo+Black&family=Inter:wght@400;900&display=swap');
 @import "tailwindcss";
 
-:root {
-  --background: #f8fafc;
-  --foreground: #0f172a;
-  --card: #ffffff;
-  --card-border: #e2e8f0;
-  --primary: #4f46e5;
-  --primary-glow: rgba(79, 70, 229, 0.1);
-}
-
 @theme {
-  --font-sans: var(--font-inter);
-  --font-display: var(--font-outfit);
-  --font-arabic: var(--font-arabic);
+  --font-heading: "Syne", "Archivo Black", sans-serif;
+  --font-body: "Inter", sans-serif;
+
+  --color-brand-orange: #FF5C00;
+  --color-brand-yellow: #FFD600;
+  --color-brand-blue: #5865F2;
+  --color-brand-lime: #BCFF00;
+  --color-brand-purple: #A855F7;
+  --color-brand-mint: #00F5A0;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #020617;
-    --foreground: #f8fafc;
-    --card: #0f172a;
-    --card-border: #1e293b;
-    --primary: #6366f1;
-    --primary-glow: rgba(99, 102, 241, 0.15);
+:root {
+  --bg-primary: #F0F4F8;
+  --text-main: #000000;
+  --border-main: #000000;
+  --card-bg: #ffffff;
+}
+
+.dark {
+  --bg-primary: #000000;
+  --text-main: #ffffff;
+  --border-main: #ffffff;
+  --card-bg: #111111;
+}
+
+@layer base {
+  body {
+    background-color: var(--bg-primary);
+    color: var(--text-main);
+    font-family: var(--font-body);
+    transition: background-color 0.3s ease;
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4 {
+    font-family: var(--font-heading);
+    font-weight: 900;
+    text-transform: uppercase;
+    letter-spacing: -0.02em;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: var(--font-sans);
-  transition: background-color 0.3s ease;
+@layer components {
+
+  /* Neo-Brutalist Card System */
+  .brutalist-card {
+    background: var(--card-bg);
+    border: 3px solid #000;
+    box-shadow: 6px 6px 0px #000;
+    transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    position: relative;
+    padding: 2rem;
+  }
+
+  .brutalist-card:hover {
+    transform: translate(-3px, -3px);
+    box-shadow: 10px 10px 0px #000;
+  }
+
+  .dark .brutalist-card {
+    border-color: #fff;
+    box-shadow: 6px 6px 0px #333;
+  }
+
+  .dark .brutalist-card:hover {
+    box-shadow: 10px 10px 0px #444;
+  }
+
+  /* Interactive Buttons */
+  .btn-brutalist {
+    border: 3px solid #000;
+    padding: 0.8rem 1.6rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+    box-shadow: 4px 4px 0px #000;
+    transition: all 0.1s;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+  }
+
+  .btn-brutalist:hover {
+    transform: translate(-1px, -1px);
+    box-shadow: 6px 6px 0px #000;
+  }
+
+  .btn-brutalist:active {
+    transform: translate(3px, 3px);
+    box-shadow: 0px 0px 0px #000;
+  }
+
+  .dark .btn-brutalist {
+    border-color: #fff;
+    box-shadow: 4px 4px 0px #fff;
+  }
+
+  .dark .btn-brutalist:active {
+    box-shadow: 0px 0px 0px #fff;
+  }
+
+  /* Specific Variants */
+  .bg-slush-orange {
+    background-color: var(--color-brand-orange);
+    color: #fff;
+  }
+
+  .bg-slush-yellow {
+    background-color: var(--color-brand-yellow);
+    color: #000;
+  }
+
+  .bg-slush-blue {
+    background-color: var(--color-brand-blue);
+    color: #fff;
+  }
+
+  .bg-slush-lime {
+    background-color: var(--color-brand-lime);
+    color: #000;
+  }
+
+  .bg-slush-purple {
+    background-color: var(--color-brand-purple);
+    color: #fff;
+  }
+
+  .bg-slush-mint {
+    background-color: var(--color-brand-mint);
+    color: #000;
+  }
+
+  /* Utilities */
+  .text-slush {
+    font-family: var(--font-heading);
+    text-shadow: 2px 2px 0px rgba(0, 0, 0, 0.1);
+  }
 }
 
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  font-family: var(--font-display);
+::-webkit-scrollbar {
+  width: 12px;
 }
 
-.font-arabic {
-  font-family: var(--font-arabic);
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
 }
 
-/* Custom Glassmorphism Utility */
-.glass-card {
-  background: var(--card);
-  border: 1px solid var(--card-border);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-  backdrop-filter: blur(8px);
+::-webkit-scrollbar-thumb {
+  background: #000;
+  border: 3px solid var(--bg-primary);
 }
 
-/* Premium Hover Effect */
-.hover-premium {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.hover-premium:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-  border-color: var(--primary-glow);
+.dark ::-webkit-scrollbar-thumb {
+  background: #fff;
 }

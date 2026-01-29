@@ -3,9 +3,11 @@
 import { useState } from 'react';
 import { TimeEntry } from '@/lib/types';
 import { format } from 'date-fns';
-import { Trash2, Download, Printer, Pencil, X, Check, Database } from 'lucide-react';
+import { Trash2, Download, Printer, Database, FileText, Calendar, ChevronUp, ChevronDown } from 'lucide-react';
 import { supabase } from '@/Supabase/supabase';
-import { cn } from '@/lib/utils';
+import { cn, formatHours } from '@/lib/utils';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
 interface EntriesTableProps {
     entries: TimeEntry[];
@@ -14,8 +16,6 @@ interface EntriesTableProps {
 }
 
 export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }: EntriesTableProps) {
-    const [editingId, setEditingId] = useState<string | null>(null);
-    const [editValue, setEditValue] = useState<{ timestamp: string; reason: string }>({ timestamp: '', reason: '' });
     const [filterDate, setFilterDate] = useState<string>('');
     const [showAll, setShowAll] = useState(false);
 
@@ -25,234 +25,133 @@ export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }
         if (!error) onEntryDeleted();
     };
 
-    const handleStartEdit = (entry: TimeEntry) => {
-        setEditingId(entry.id);
-        const date = new Date(entry.timestamp);
-        const formattedDate = format(date, "yyyy-MM-dd'T'HH:mm");
-        setEditValue({ timestamp: formattedDate, reason: entry.reason || '' });
-    };
-
-    const handleSaveEdit = async (id: string) => {
-        const { error } = await supabase
-            .from('time_entries')
-            .update({
-                timestamp: new Date(editValue.timestamp).toISOString(),
-                reason: editValue.reason
-            })
-            .eq('id', id);
-
-        if (!error) {
-            setEditingId(null);
-            onEntryUpdated();
-        }
-    };
-
     const filteredEntries = filterDate
         ? entries.filter(e => format(new Date(e.timestamp), 'yyyy-MM-dd') === filterDate)
         : entries;
 
     const displayedEntries = showAll ? filteredEntries : filteredEntries.slice(0, 5);
 
-    const handleExportCSV = () => {
-        const headers = ['Date', 'Time', 'Type', 'Reason'];
-        const rows = filteredEntries.map(e => [
-            format(new Date(e.timestamp), 'yyyy-MM-dd'),
+    const handleExportPDF = () => {
+        const doc = new jsPDF();
+        doc.setFontSize(20);
+        doc.text('SLUSH TIMER - LOGS', 14, 22);
+
+        const tableColumn = ["Date", "Time", "Type", "Notes"];
+        const tableRows = filteredEntries.map(e => [
+            format(new Date(e.timestamp), 'MMM dd, yyyy'),
             format(new Date(e.timestamp), 'HH:mm:ss'),
             e.type,
-            e.reason || ''
+            e.reason || '—'
         ]);
 
-        const csvContent = [headers, ...rows].map(r => r.join(',')).join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `time_entries_${format(new Date(), 'yyyy-MM-dd')}.csv`;
-        a.click();
-    };
+        autoTable(doc, {
+            head: [tableColumn],
+            body: tableRows,
+            startY: 30,
+            theme: 'grid',
+            headStyles: { fillColor: [0, 0, 0] },
+        });
 
-    const handlePrint = () => {
-        window.print();
+        doc.save(`slush_report_${format(new Date(), 'yyyy-MM-dd')}.pdf`);
     };
 
     return (
-        <div className="glass-card hover-premium p-8 rounded-[2rem] overflow-hidden flex flex-col">
-            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 mb-10">
-                <div className="flex items-center gap-4">
-                    <div className="p-2 bg-indigo-500/10 rounded-xl">
-                        <Database className="w-6 h-6 text-indigo-500" />
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <h3 className="text-xl font-bold tracking-tight">Logged Entries</h3>
-                        <p className="text-[10px] text-zinc-400 font-extrabold uppercase tracking-[0.2em]">Operational History • {filteredEntries.length} logs</p>
-                    </div>
+        <div className="brutalist-card bg-white overflow-hidden p-0">
+            <div className="p-8 border-b-4 border-black flex flex-col md:flex-row md:items-center justify-between gap-6 bg-brand-yellow">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-black">
+                        <Database className="w-8 h-8" />
+                        ENTRY LOGS
+                    </h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Operational History: {filteredEntries.length} Units
+                    </p>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-4 w-full sm:w-auto">
-                    <div className="relative group/input flex-1 sm:flex-none h-11">
+                <div className="flex items-center gap-3">
+                    <div className="relative group">
+                        <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-black" />
                         <input
                             type="date"
                             value={filterDate}
                             onChange={(e) => setFilterDate(e.target.value)}
-                            className="w-full sm:w-40 px-4 h-full bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/5 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                            className="pl-10 pr-4 py-2 bg-white border-2 border-black font-black text-xs uppercase shadow-[4px_4px_0px_#000] focus:shadow-none focus:translate-x-[2px] focus:translate-y-[2px] transition-all outline-none"
                         />
                     </div>
-                    {filterDate && (
-                        <button
-                            onClick={() => setFilterDate('')}
-                            className="text-[10px] font-black text-indigo-500 uppercase tracking-widest hover:text-indigo-600 px-2"
-                        >
-                            Reset
-                        </button>
-                    )}
-                    <div className="h-8 w-px bg-zinc-200 dark:bg-white/10 hidden sm:block mx-1"></div>
                     <div className="flex gap-2">
-                        <button
-                            onClick={handlePrint}
-                            className="p-2.5 bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-xl text-zinc-500 transition-all active:scale-90"
-                            title="Print Report"
-                        >
-                            <Printer className="w-5 h-5" />
-                        </button>
-                        <button
-                            onClick={handleExportCSV}
-                            className="p-2.5 bg-zinc-50 dark:bg-white/5 hover:bg-zinc-100 dark:hover:bg-white/10 rounded-xl text-zinc-500 transition-all active:scale-90"
-                            title="Export Analytics"
-                        >
-                            <Download className="w-5 h-5" />
+                        <button onClick={handleExportPDF} className="btn-brutalist bg-black text-white p-2.5">
+                            <FileText className="w-5 h-5" />
                         </button>
                     </div>
                 </div>
             </div>
 
-            <div className="overflow-x-auto -mx-2">
-                <table className="w-full text-left text-sm border-separate border-spacing-0">
+            <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
                     <thead>
-                        <tr className="border-b border-zinc-100 dark:border-zinc-800">
-                            <th className="py-4 px-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] border-b border-zinc-100 dark:border-white/5">Date & Time</th>
-                            <th className="py-4 px-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] border-b border-zinc-100 dark:border-white/5">Transition</th>
-                            <th className="py-4 px-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] border-b border-zinc-100 dark:border-white/5">Notes</th>
-                            <th className="py-4 px-6 text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em] border-b border-zinc-100 dark:border-white/5 text-right">Control</th>
+                        <tr className="bg-black text-white">
+                            <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest">Temporal Stamp</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest">Transition</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest">Protocol</th>
+                            <th className="px-8 py-4 text-[10px] font-black uppercase tracking-widest text-right">Control</th>
                         </tr>
                     </thead>
-                    <tbody className="divide-y divide-zinc-50 dark:divide-white/5">
-                        {displayedEntries.map((entry) => (
-                            <tr key={entry.id} className="hover:bg-zinc-50/50 dark:hover:bg-white/[0.02] transition-colors group">
-                                <td className="py-5 px-6">
-                                    {editingId === entry.id ? (
-                                        <input
-                                            type="datetime-local"
-                                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            value={editValue.timestamp}
-                                            onChange={(e) => setEditValue({ ...editValue, timestamp: e.target.value })}
-                                        />
-                                    ) : (
-                                        <div className="flex flex-col gap-0.5">
-                                            <span className="font-bold text-zinc-800 dark:text-zinc-100">
-                                                {format(new Date(entry.timestamp), 'MMM dd, yyyy')}
-                                            </span>
-                                            <span className="text-[10px] text-zinc-400 font-mono font-black uppercase">
-                                                {format(new Date(entry.timestamp), 'HH:mm:ss')}
-                                            </span>
-                                        </div>
-                                    )}
-                                </td>
-                                <td className="py-5 px-6">
-                                    <span className={cn(
-                                        "px-2.5 py-1 rounded-lg text-[9px] font-black tracking-[0.15em] uppercase border",
-                                        entry.type === 'CHECK_IN'
-                                            ? 'bg-indigo-50 text-indigo-600 dark:bg-indigo-500/10 dark:text-indigo-400 border-indigo-100/50 dark:border-indigo-500/20'
-                                            : 'bg-zinc-50 text-zinc-500 dark:bg-white/5 dark:text-zinc-400 border-zinc-100 dark:border-white/10'
-                                    )}>
-                                        {entry.type}
-                                    </span>
-                                </td>
-                                <td className="py-5 px-6">
-                                    {editingId === entry.id ? (
-                                        <input
-                                            type="text"
-                                            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-xs w-full max-w-[200px] focus:ring-2 focus:ring-indigo-500 outline-none"
-                                            value={editValue.reason}
-                                            placeholder="Add notes..."
-                                            onChange={(e) => setEditValue({ ...editValue, reason: e.target.value })}
-                                        />
-                                    ) : (
-                                        <span className="text-zinc-500 dark:text-zinc-400 text-xs font-medium italic">
-                                            {entry.reason || '—'}
-                                        </span>
-                                    )}
-                                </td>
-                                <td className="py-5 px-6 text-right">
-                                    <div className="flex justify-end gap-2 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-all">
-                                        {editingId === entry.id ? (
-                                            <>
-                                                <button
-                                                    onClick={() => handleSaveEdit(entry.id)}
-                                                    className="p-2 bg-emerald-500/10 text-emerald-500 rounded-xl hover:bg-emerald-500 hover:text-white transition-all active:scale-90"
-                                                >
-                                                    <Check className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => setEditingId(null)}
-                                                    className="p-2 bg-zinc-100 dark:bg-white/10 text-zinc-500 rounded-xl hover:bg-zinc-200 dark:hover:bg-white/20 transition-all active:scale-90"
-                                                >
-                                                    <X className="w-4 h-4" />
-                                                </button>
-                                            </>
-                                        ) : (
-                                            <>
-                                                <button
-                                                    onClick={() => handleStartEdit(entry)}
-                                                    className="p-2 bg-indigo-50 dark:bg-indigo-500/10 text-indigo-500 rounded-xl hover:bg-indigo-500 hover:text-white transition-all active:scale-90"
-                                                >
-                                                    <Pencil className="w-4 h-4" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(entry.id)}
-                                                    className="p-2 bg-rose-500/10 text-rose-500 rounded-xl hover:bg-rose-500 hover:text-white transition-all active:scale-90"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </>
-                                        )}
-                                    </div>
+                    <tbody className="divide-y-2 divide-black">
+                        {displayedEntries.length === 0 ? (
+                            <tr>
+                                <td colSpan={4} className="px-8 py-20 text-center font-black text-black/20 text-xl italic uppercase">
+                                    No data packets found
                                 </td>
                             </tr>
-                        ))}
+                        ) : (
+                            displayedEntries.map((entry) => (
+                                <tr key={entry.id} className="group hover:bg-brand-mint/10 transition-colors">
+                                    <td className="px-8 py-5">
+                                        <div className="flex flex-col">
+                                            <span className="text-xs font-black text-black">{format(new Date(entry.timestamp), 'MMM dd, yyyy')}</span>
+                                            <span className="text-[10px] font-black text-black/40 tabular-nums">{format(new Date(entry.timestamp), 'HH:mm:ss')}</span>
+                                        </div>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className={cn(
+                                            "inline-flex items-center gap-2 px-3 py-1 border-2 border-black text-[9px] font-black uppercase tracking-widest",
+                                            entry.type === 'CHECK_IN' ? "bg-brand-lime text-black" : "bg-black text-white"
+                                        )}>
+                                            {entry.type.replace('_', ' ')}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5">
+                                        <span className="text-xs font-black text-black/60 italic">
+                                            {entry.reason || '— STANDARD PROCED'}
+                                        </span>
+                                    </td>
+                                    <td className="px-8 py-5 text-right">
+                                        <button
+                                            onClick={() => handleDelete(entry.id)}
+                                            className="p-2 border-2 border-black bg-brand-orange text-white shadow-[3px_3px_0px_#000] active:shadow-none active:translate-x-[2px] active:translate-y-[2px] transition-all"
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))
+                        )}
                     </tbody>
                 </table>
             </div>
 
             {filteredEntries.length > 5 && (
-                <div className="mt-10 flex justify-center">
+                <div className="p-6 bg-black flex justify-center">
                     <button
                         onClick={() => setShowAll(!showAll)}
-                        className="px-8 py-3 bg-zinc-50 dark:bg-white/5 border border-zinc-100 dark:border-white/10 rounded-2xl text-[10px] font-black text-zinc-500 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-white/10 transition-all uppercase tracking-[0.25em] active:scale-95 shadow-sm"
+                        className="btn-brutalist bg-brand-yellow text-black border-white shadow-[4px_4px_0px_#fff]"
                     >
-                        {showAll ? 'Collapse List' : `See All ${filteredEntries.length} Records`}
+                        {showAll ? (
+                            <>Collapse <ChevronUp className="w-4 h-4" /></>
+                        ) : (
+                            <>Expand Matrix <ChevronDown className="w-4 h-4" /></>
+                        )}
                     </button>
-                </div>
-            )}
-
-            {filteredEntries.length === 0 && (
-                <div className="py-24 text-center flex flex-col items-center gap-6 animate-in fade-in zoom-in duration-500">
-                    <div className="w-20 h-20 bg-zinc-50 dark:bg-white/5 rounded-[2.5rem] flex items-center justify-center border border-zinc-100 dark:border-white/5 rotate-6">
-                        <div className="w-12 h-12 bg-zinc-200/50 dark:bg-white/10 rounded-2xl flex items-center justify-center -rotate-12">
-                            <span className="text-3xl">📝</span>
-                        </div>
-                    </div>
-                    <div className="flex flex-col gap-1">
-                        <p className="text-sm font-bold text-zinc-800 dark:text-zinc-200 uppercase tracking-widest">No matching logs</p>
-                        <p className="text-xs text-zinc-400 font-medium">Select a different date or start your timer.</p>
-                    </div>
-                    {filterDate && (
-                        <button
-                            onClick={() => setFilterDate('')}
-                            className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] border-b border-indigo-500/30 pb-0.5 hover:border-indigo-500 transition-all"
-                        >
-                            Clear Filter
-                        </button>
-                    )}
                 </div>
             )}
         </div>

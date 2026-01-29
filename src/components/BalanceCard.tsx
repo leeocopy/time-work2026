@@ -1,230 +1,159 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
+import { TrendingUp, Calendar } from 'lucide-react';
+import { cn, formatHours } from '@/lib/utils';
 import { TimeEntry } from '@/lib/types';
 import {
+    isToday,
     startOfMonth,
+    endOfMonth,
     eachDayOfInterval,
     isWeekend,
-    format,
-    isSameDay,
-    endOfYesterday,
-    isBefore,
-    isAfter
+    isAfter,
+    startOfToday,
+    format
 } from 'date-fns';
-import { Calendar } from 'lucide-react';
-import { cn } from '@/lib/utils';
+import { CustomHoliday } from './HolidayCard';
 
 interface BalanceCardProps {
     entries: TimeEntry[];
-    customHolidays: any[];
+    customHolidays: CustomHoliday[];
+    workGoal: number;
 }
 
-const PUBLIC_HOLIDAYS_2026 = [
-    '2026-01-01', '2026-04-06', '2026-05-01', '2026-05-08', '2026-05-14',
-    '2026-05-25', '2026-07-14', '2026-08-15', '2026-11-01', '2026-11-11', '2026-12-25'
-];
+export default function BalanceCard({ entries, customHolidays, workGoal }: BalanceCardProps) {
+    const stats = useMemo(() => {
+        const today = startOfToday();
+        const startState = startOfMonth(today);
+        const endState = endOfMonth(today);
 
-export default function BalanceCard({ entries, customHolidays }: BalanceCardProps) {
-    const [currentTime, setCurrentTime] = useState(new Date());
+        const daysInMonth = eachDayOfInterval({ start: startState, end: endState });
 
-    useEffect(() => {
-        const timer = setInterval(() => setCurrentTime(new Date()), 1000); // Live updates
-        return () => clearInterval(timer);
-    }, []);
+        let totalWorked = 0;
+        let dailyWorked = 0;
+        let workDaysCount = 0;
+        let passedWorkDays = 0;
 
-    const holidayDates = useMemo(() => {
-        return customHolidays.map(h => h.date);
-    }, [customHolidays]);
+        // Calculate worked time
+        const sorted = [...entries].sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
 
-    const getRequiredHoursForDay = (date: Date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
+        const sessions: { start: Date, end: Date }[] = [];
+        let currentStart: Date | null = null;
 
-        // Point 2 & 6: Expected hours = 0 if Holiday or Weekend
-        if (isWeekend(date) || PUBLIC_HOLIDAYS_2026.includes(dateStr) || holidayDates.includes(dateStr)) {
-            return 0;
-        }
-
-        // Point 1: Weekly target
-        const dayOfWeek = date.getDay(); // Sunday is 0, Monday is 1
-        if (dayOfWeek >= 1 && dayOfWeek <= 4) {
-            return 8.5; // Monday to Thursday
-        }
-        if (dayOfWeek === 5) {
-            return 7.5; // Friday
-        }
-        return 0;
-    };
-
-    const { workedToday, requiredToday, remainingToday, monthlyBalance } = useMemo(() => {
-        const today = new Date();
-        const todayStr = format(today, 'yyyy-MM-dd');
-
-        // 1. Expected Today (Weekly target)
-        const expectedToday = getRequiredHoursForDay(today);
-
-        // 2. Balance Before Today (Monthly running balance up to yesterday)
-        const monthStart = startOfMonth(today);
-        const yesterday = endOfYesterday();
-        let balanceBeforeToday = 0;
-
-        if (isAfter(yesterday, monthStart) || isSameDay(yesterday, monthStart)) {
-            const pastDays = eachDayOfInterval({ start: monthStart, end: yesterday });
-            for (const day of pastDays) {
-                const req = getRequiredHoursForDay(day);
-                const dayStr = format(day, 'yyyy-MM-dd');
-                const dayEntries = entries
-                    .filter(e => format(new Date(e.timestamp), 'yyyy-MM-dd') === dayStr)
-                    .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-                let dayMillis = 0;
-                let lastIn: number | null = null;
-                for (const e of dayEntries) {
-                    const t = new Date(e.timestamp).getTime();
-                    if (e.type === 'CHECK_IN') {
-                        lastIn = t;
-                    } else if (e.type === 'CHECK_OUT' && lastIn) {
-                        dayMillis += t - lastIn;
-                        lastIn = null;
-                    }
-                }
-
-                const dayHours = dayMillis / (1000 * 3600);
-                // If it's a holiday (req=0), any dayHours is a bonus.
-                balanceBeforeToday += (dayHours - req);
-            }
-        }
-
-        // 3. Worked Today So Far (Live update)
-        const todayEntries = entries
-            .filter(e => format(new Date(e.timestamp), 'yyyy-MM-dd') === todayStr)
-            .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime());
-
-        let workedTodayMillis = 0;
-        let lastInToday: number | null = null;
-        for (const e of todayEntries) {
-            const t = new Date(e.timestamp).getTime();
+        sorted.forEach(e => {
             if (e.type === 'CHECK_IN') {
-                lastInToday = t;
-            } else if (e.type === 'CHECK_OUT' && lastInToday) {
-                workedTodayMillis += t - lastInToday;
-                lastInToday = null;
+                currentStart = new Date(e.timestamp);
+            } else if (e.type === 'CHECK_OUT' && currentStart) {
+                sessions.push({ start: currentStart, end: new Date(e.timestamp) });
+                currentStart = null;
             }
+        });
+
+        // Live session
+        if (currentStart) {
+            sessions.push({ start: currentStart, end: new Date() });
         }
-        if (lastInToday) {
-            workedTodayMillis += currentTime.getTime() - lastInToday;
-        }
-        const workedTodayHours = workedTodayMillis / (1000 * 3600);
 
-        // 4. Required Today (Adjusted by carry-over: Point 4)
-        // If I was -1h yesterday, I need expectedToday + 1h today.
-        const requiredWorkedToday = expectedToday - balanceBeforeToday;
+        sessions.forEach(s => {
+            const duration = (s.end.getTime() - s.start.getTime()) / 1000;
+            totalWorked += duration;
+            if (isToday(s.start)) dailyWorked += duration;
+        });
 
-        // 5. Remaining Today (Point 5)
-        const remainingTodayHours = requiredWorkedToday - workedTodayHours;
+        // Calculate expected time
+        daysInMonth.forEach(day => {
+            const isHoli = customHolidays.some(h => format(new Date(h.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+            const isWE = isWeekend(day);
+            const isWorkDay = !isHoli && !isWE;
 
-        // 6. Running Monthly Balance (Point 3)
-        const currentMonthlyBalance = balanceBeforeToday + (workedTodayHours - expectedToday);
+            if (isWorkDay) {
+                workDaysCount++;
+                if (!isAfter(day, today)) {
+                    passedWorkDays++;
+                }
+            }
+        });
+
+        const expectedSoFar = passedWorkDays * workGoal * 3600;
+        const monthlyBalance = totalWorked - expectedSoFar;
+        const dailyBalance = dailyWorked - (workGoal * 3600);
 
         return {
-            workedToday: workedTodayHours,
-            requiredToday: requiredWorkedToday,
-            remainingToday: remainingTodayHours,
-            monthlyBalance: currentMonthlyBalance
+            monthlyBalance,
+            dailyBalance,
+            totalWorked,
+            workDays: passedWorkDays,
+            totalDays: workDaysCount
         };
-    }, [entries, currentTime, customHolidays]);
-
-    const formatDuration = (hours: number) => {
-        const isNegative = hours < 0;
-        const absMins = Math.round(Math.abs(hours) * 60);
-        const h = Math.floor(absMins / 60);
-        const m = absMins % 60;
-        return {
-            text: `${isNegative ? '-' : '+'}${h}h ${m}m`,
-            isNegative
-        };
-    };
-
-    const formatSimple = (hours: number) => {
-        const absMins = Math.round(Math.abs(hours) * 60);
-        const h = Math.floor(absMins / 60);
-        const m = absMins % 60;
-        return `${h}h ${m}m`;
-    };
-
-    const remaining = formatDuration(remainingToday);
-    const monthly = formatDuration(monthlyBalance);
+    }, [entries, customHolidays, workGoal]);
 
     return (
-        <div className="glass-card hover-premium px-8 py-10 rounded-[2rem] flex flex-col gap-8">
-            <div className="flex flex-col gap-2">
-                <div className="flex items-center gap-3">
-                    <div className="p-2 bg-indigo-500/10 rounded-xl">
-                        <Calendar className="w-6 h-6 text-indigo-500" />
-                    </div>
-                    <h3 className="text-xl font-extrabold tracking-tight">
-                        Balance Overview
+        <div className="brutalist-card bg-slush-blue group">
+            <div className="flex justify-between items-start mb-10">
+                <div className="flex flex-col">
+                    <h3 className="text-2xl font-black italic flex items-center gap-3 text-white">
+                        <TrendingUp className="w-8 h-8" />
+                        CAPITAL FLOW
                     </h3>
+                    <p className="text-[10px] font-black uppercase tracking-widest bg-black text-white px-2 py-0.5 inline-block w-fit mt-1">
+                        Monthly Temporal Yield
+                    </p>
                 </div>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 font-bold uppercase tracking-widest pl-11">
-                    Performance Analytics
-                </p>
+                <div className="btn-brutalist bg-white text-black py-1 px-4 text-xs shadow-[2px_2px_0px_#000]">
+                    STABLE
+                </div>
             </div>
 
             <div className="space-y-6">
-                {/* Daily Status Section */}
-                <div className={cn(
-                    "p-8 rounded-[1.5rem] flex flex-col gap-6 transition-all border",
-                    remaining.isNegative
-                        ? "bg-emerald-500/[0.03] border-emerald-500/20 shadow-[0_0_20px_-5px_rgba(16,185,129,0.1)]"
-                        : "bg-rose-500/[0.03] border-rose-500/20 shadow-[0_0_20px_-5px_rgba(244,63,94,0.1)]"
-                )}>
-                    <div className="flex flex-col items-center gap-2">
-                        <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">
-                            {remaining.isNegative ? "Surplus reached" : "Remaining Today"}
-                        </span>
-                        <span className={cn(
-                            "text-5xl font-black tracking-tighter drop-shadow-sm",
-                            remaining.isNegative ? "text-emerald-500" : "text-rose-500"
+                <div className="bg-black text-white p-6 border-4 border-white shadow-[10px_10px_0px_rgba(0,0,0,0.5)] -rotate-1 hover:rotate-0 transition-transform">
+                    <div className="flex justify-between items-center mb-4">
+                        <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/40">Net Balance</span>
+                        <div className={cn(
+                            "px-3 py-1 text-[10px] font-black uppercase border-2",
+                            stats.monthlyBalance >= 0 ? "bg-brand-lime text-black border-black shadow-[4px_4px_0px_#fff]" : "bg-brand-orange text-white border-white shadow-[4px_4px_0px_#000]"
                         )}>
-                            {remaining.isNegative ? formatSimple(Math.abs(remainingToday)) : formatSimple(remainingToday)}
+                            {stats.monthlyBalance >= 0 ? 'Surplus' : 'Deficit'}
+                        </div>
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                        <span className="text-5xl font-black tracking-tighter tabular-nums">
+                            {stats.monthlyBalance >= 0 ? '+' : ''}{formatHours(stats.monthlyBalance)}
                         </span>
                     </div>
+                </div>
 
-                    <div className="grid grid-cols-2 gap-4 pt-6 border-t border-zinc-200/30 dark:border-zinc-800/50">
-                        <div className="flex flex-col gap-1">
-                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Worked</span>
-                            <span className="text-base font-extrabold">{formatSimple(workedToday)}</span>
-                        </div>
-                        <div className="flex flex-col items-end gap-1">
-                            <span className="text-[10px] font-black text-zinc-400 uppercase tracking-widest leading-none">Required</span>
-                            <span className="text-base font-extrabold">{formatSimple(requiredToday)}</span>
-                        </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="bg-white border-4 border-black p-4 shadow-[6px_6px_0px_#000]">
+                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Today Flux</p>
+                        <p className={cn(
+                            "text-xl font-black tabular-nums",
+                            stats.dailyBalance >= 0 ? "text-brand-blue" : "text-brand-orange"
+                        )}>
+                            {stats.dailyBalance >= 0 ? '+' : ''}{formatHours(stats.dailyBalance)}
+                        </p>
+                    </div>
+                    <div className="bg-brand-yellow border-4 border-black p-4 shadow-[6px_6px_0px_#000]">
+                        <p className="text-[9px] font-black text-black/40 uppercase tracking-widest mb-1">Total Yield</p>
+                        <p className="text-xl font-black text-black tabular-nums">
+                            {formatHours(stats.totalWorked)}
+                        </p>
                     </div>
                 </div>
 
-                {/* Monthly Total Section */}
-                <div className={cn(
-                    "p-8 rounded-[1.5rem] flex flex-col items-center gap-2 transition-all border",
-                    monthly.isNegative
-                        ? "bg-rose-500/[0.02] border-rose-500/10"
-                        : "bg-emerald-500/[0.02] border-emerald-500/10"
-                )}>
-                    <span className="text-[10px] font-black text-zinc-400 uppercase tracking-[0.2em]">Monthly Balance</span>
-                    <span className={cn(
-                        "text-3xl font-black tracking-tighter",
-                        monthly.isNegative ? "text-rose-500" : "text-emerald-500"
-                    )}>
-                        {monthly.text}
-                    </span>
+                <div className="bg-white/10 border-2 border-white/20 p-4">
+                    <div className="flex justify-between items-center">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-black rounded-lg">
+                                <Calendar className="w-4 h-4 text-brand-lime" />
+                            </div>
+                            <span className="text-xs font-black text-white uppercase tracking-widest">Cycle Stats</span>
+                        </div>
+                        <span className="text-sm font-black text-white tabular-nums">
+                            {stats.workDays} / {stats.totalDays} Days
+                        </span>
+                    </div>
                 </div>
-            </div>
-
-            <div className="flex flex-col items-center gap-3">
-                <div className="h-px w-12 bg-zinc-200 dark:bg-zinc-800" />
-                <p className="text-[10px] text-center text-zinc-400 uppercase font-black tracking-[0.3em]">
-                    Resets {format(new Date(), 'MMMM')} 01
-                </p>
             </div>
         </div>
     );
