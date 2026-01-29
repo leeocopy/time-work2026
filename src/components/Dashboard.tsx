@@ -101,7 +101,7 @@ export default function Dashboard({ user }: DashboardProps) {
                             <ProgressCard entries={entries} />
                         </div>
 
-                        <EntriesTable entries={entries} onEntryDeleted={fetchEntries} />
+                        <EntriesTable entries={entries} onEntryDeleted={fetchEntries} onEntryUpdated={fetchEntries} />
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <ManualEntry user={user} onEntryAdded={fetchEntries} />

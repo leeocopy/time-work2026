@@ -1,20 +1,48 @@
 'use client';
 
+import { useState } from 'react';
 import { TimeEntry } from '@/lib/types';
 import { format } from 'date-fns';
-import { Trash2, Download, Printer } from 'lucide-react';
+import { Trash2, Download, Printer, Pencil, X, Check } from 'lucide-react';
 import { supabase } from '@/Supabase/supabase';
 
 interface EntriesTableProps {
     entries: TimeEntry[];
     onEntryDeleted: () => void;
+    onEntryUpdated: () => void;
 }
 
-export default function EntriesTable({ entries, onEntryDeleted }: EntriesTableProps) {
+export default function EntriesTable({ entries, onEntryDeleted, onEntryUpdated }: EntriesTableProps) {
+    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editValue, setEditValue] = useState<{ timestamp: string; reason: string }>({ timestamp: '', reason: '' });
+
     const handleDelete = async (id: string) => {
         if (!confirm('Are you sure you want to delete this entry?')) return;
         const { error } = await supabase.from('time_entries').delete().eq('id', id);
         if (!error) onEntryDeleted();
+    };
+
+    const handleStartEdit = (entry: TimeEntry) => {
+        setEditingId(entry.id);
+        const date = new Date(entry.timestamp);
+        // Format for datetime-local input: yyyy-MM-ddThh:mm
+        const formattedDate = format(date, "yyyy-MM-dd'T'HH:mm");
+        setEditValue({ timestamp: formattedDate, reason: entry.reason || '' });
+    };
+
+    const handleSaveEdit = async (id: string) => {
+        const { error } = await supabase
+            .from('time_entries')
+            .update({
+                timestamp: new Date(editValue.timestamp).toISOString(),
+                reason: editValue.reason
+            })
+            .eq('id', id);
+
+        if (!error) {
+            setEditingId(null);
+            onEntryUpdated();
+        }
     };
 
     const handleExportCSV = () => {
@@ -65,8 +93,7 @@ export default function EntriesTable({ entries, onEntryDeleted }: EntriesTablePr
                 <table className="w-full text-left text-sm border-collapse">
                     <thead>
                         <tr className="border-b border-zinc-100 dark:border-zinc-800 text-zinc-500 font-bold uppercase tracking-wider text-[10px]">
-                            <th className="py-3 px-4">Date</th>
-                            <th className="py-3 px-4">Time</th>
+                            <th className="py-3 px-4">Date & Time</th>
                             <th className="py-3 px-4">Type</th>
                             <th className="py-3 px-4">Reason</th>
                             <th className="py-3 px-4 text-right">Actions</th>
@@ -75,30 +102,84 @@ export default function EntriesTable({ entries, onEntryDeleted }: EntriesTablePr
                     <tbody>
                         {entries.map((entry) => (
                             <tr key={entry.id} className="border-b border-zinc-50 dark:border-zinc-800/50 hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors group">
-                                <td className="py-4 px-4 font-medium text-zinc-900 dark:text-zinc-100">
-                                    {format(new Date(entry.timestamp), 'MMM dd, yyyy')}
-                                </td>
-                                <td className="py-4 px-4 text-zinc-600 dark:text-zinc-400 font-mono font-bold">
-                                    {format(new Date(entry.timestamp), 'HH:mm:ss')}
+                                <td className="py-4 px-4">
+                                    {editingId === entry.id ? (
+                                        <input
+                                            type="datetime-local"
+                                            className="bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs font-mono"
+                                            value={editValue.timestamp}
+                                            onChange={(e) => setEditValue({ ...editValue, timestamp: e.target.value })}
+                                        />
+                                    ) : (
+                                        <div className="flex flex-col">
+                                            <span className="font-medium text-zinc-900 dark:text-zinc-100">
+                                                {format(new Date(entry.timestamp), 'MMM dd, yyyy')}
+                                            </span>
+                                            <span className="text-[10px] text-zinc-500 font-mono font-bold">
+                                                {format(new Date(entry.timestamp), 'HH:mm:ss')}
+                                            </span>
+                                        </div>
+                                    )}
                                 </td>
                                 <td className="py-4 px-4">
                                     <span className={`px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${entry.type === 'CHECK_IN'
-                                            ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
-                                            : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
+                                        ? 'bg-indigo-100 text-indigo-600 dark:bg-indigo-900/30 dark:text-indigo-400'
+                                        : 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400'
                                         }`}>
                                         {entry.type}
                                     </span>
                                 </td>
-                                <td className="py-4 px-4 text-zinc-500 dark:text-zinc-400 italic">
-                                    {entry.reason || '-'}
+                                <td className="py-4 px-4 italic">
+                                    {editingId === entry.id ? (
+                                        <input
+                                            type="text"
+                                            className="bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 rounded px-2 py-1 text-xs w-full max-w-[150px]"
+                                            value={editValue.reason}
+                                            placeholder="Reason..."
+                                            onChange={(e) => setEditValue({ ...editValue, reason: e.target.value })}
+                                        />
+                                    ) : (
+                                        <span className="text-zinc-500 dark:text-zinc-400">{entry.reason || '-'}</span>
+                                    )}
                                 </td>
-                                <td className="py-4 px-4 text-right opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button
-                                        onClick={() => handleDelete(entry.id)}
-                                        className="p-1 px-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
+                                <td className="py-4 px-4 text-right">
+                                    <div className="flex justify-end gap-1 opacity-100 sm:opacity-0 group-hover:opacity-100 transition-opacity">
+                                        {editingId === entry.id ? (
+                                            <>
+                                                <button
+                                                    onClick={() => handleSaveEdit(entry.id)}
+                                                    className="p-1 px-2 hover:bg-emerald-50 dark:hover:bg-emerald-900/20 text-emerald-500 rounded transition-colors"
+                                                    title="Save"
+                                                >
+                                                    <Check className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditingId(null)}
+                                                    className="p-1 px-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 rounded transition-colors"
+                                                    title="Cancel"
+                                                >
+                                                    <X className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    onClick={() => handleStartEdit(entry)}
+                                                    className="p-1 px-2 hover:bg-indigo-50 dark:hover:bg-indigo-900/20 text-indigo-500 rounded transition-colors"
+                                                    title="Edit"
+                                                >
+                                                    <Pencil className="w-4 h-4" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(entry.id)}
+                                                    className="p-1 px-2 hover:bg-red-50 dark:hover:bg-red-900/20 text-red-500 rounded transition-colors"
+                                                    title="Delete"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </>
+                                        )}
+                                    </div>
                                 </td>
                             </tr>
                         ))}
