@@ -2,8 +2,7 @@
 
 import { Activity } from 'lucide-react';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { formatHours } from '@/lib/utils';
-import { cn } from '@/lib/utils';
+import { formatHours, cn, getWorkGoal } from '@/lib/utils';
 import { TimeEntry } from '@/lib/types';
 import { isToday, startOfToday, format } from 'date-fns';
 
@@ -53,15 +52,17 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
             totalBreak += (now.getTime() - new Date(lastEntry.timestamp).getTime()) / 1000;
         }
 
-        const goalSeconds = workGoal * 3600;
-        const pct = (worked / goalSeconds) * 100;
+        const today = new Date();
+        const currentGoal = getWorkGoal(today);
+        const goalSeconds = currentGoal * 3600;
+        const pct = goalSeconds > 0 ? (worked / goalSeconds) * 100 : 100;
         const dailyBalance = worked - goalSeconds;
 
         // Leave Time: First Entry + Goal + Total Break
         let leaveTime: Date | null = null;
         const firstInDate = firstIn as Date | null;
-        if (firstInDate) {
-            leaveTime = new Date(firstInDate.getTime() + (workGoal * 3600 * 1000) + (totalBreak * 1000));
+        if (firstInDate && currentGoal > 0) {
+            leaveTime = new Date(firstInDate.getTime() + (currentGoal * 3600 * 1000) + (totalBreak * 1000));
         }
 
         return {
@@ -92,7 +93,7 @@ export default function ProgressCard({ entries, workGoal }: ProgressCardProps) {
                         TODAY'S PROGRESS
                     </h3>
                     <p className="text-[10px] font-black uppercase tracking-widest bg-white text-black px-2 py-0.5 inline-block w-fit mt-1">
-                        Node Target: {workGoal}H
+                        Node Target: {getWorkGoal(new Date())}H
                     </p>
                 </div>
                 <div className={cn(

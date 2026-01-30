@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Calendar, Trash2, Plus, X } from 'lucide-react';
 import { format } from 'date-fns';
 import { cn } from '@/lib/utils';
+import { PUBLIC_HOLIDAYS } from '@/lib/constants';
 
 export interface CustomHoliday {
     id: string;
@@ -11,19 +12,6 @@ export interface CustomHoliday {
     date: string;
 }
 
-const PUBLIC_HOLIDAYS_2026 = [
-    { date: '2026-01-01', name: "Jour de l'An" },
-    { date: '2026-04-06', name: 'Lundi de Pâques' },
-    { date: '2026-05-01', name: 'Fête du Travail' },
-    { date: '2026-05-08', name: 'Victoire 1945' },
-    { date: '2026-05-14', name: 'Ascension' },
-    { date: '2026-05-25', name: 'Lundi de Pentecôte' },
-    { date: '2026-07-14', name: 'Fête Nationale' },
-    { date: '2026-08-15', name: 'Assomption' },
-    { date: '2026-11-01', name: 'Toussaint' },
-    { date: '2026-11-11', name: 'Armistice 1918' },
-    { date: '2026-12-25', name: 'Noël' },
-];
 
 interface HolidayCardProps {
     customHolidays: CustomHoliday[];
@@ -138,7 +126,7 @@ export default function HolidayCard({ customHolidays, onHolidaysChange }: Holida
                         Jours Fériés (2026)
                     </h4>
                     <div className="space-y-2">
-                        {PUBLIC_HOLIDAYS_2026.map(h => (
+                        {PUBLIC_HOLIDAYS.map(h => (
                             <div key={h.name} className="flex justify-between items-center p-4 bg-slate-50 border-1 border-black/10 hover:bg-white hover:border-black transition-all group">
                                 <span className="text-[11px] font-black text-black/60 group-hover:text-black uppercase italic">{h.name}</span>
                                 <span className="text-[10px] font-black text-black/40 tabular-nums uppercase">{h.date}</span>

@@ -2,7 +2,8 @@
 
 import { useMemo } from 'react';
 import { TrendingUp, Calendar } from 'lucide-react';
-import { cn, formatHours } from '@/lib/utils';
+import { cn, formatHours, getWorkGoal } from '@/lib/utils';
+import { PUBLIC_HOLIDAYS } from '@/lib/constants';
 import { TimeEntry } from '@/lib/types';
 import {
     isToday,
@@ -70,35 +71,43 @@ export default function BalanceCard({ entries, customHolidays, workGoal }: Balan
             }
         });
 
-        // Calculate expected time
+        let expectedBeforeTodaySeconds = 0;
+        let totalExpectedTillNowSeconds = 0;
+
         daysInMonth.forEach(day => {
-            const isHoli = customHolidays.some(h => format(new Date(h.date), 'yyyy-MM-dd') === format(day, 'yyyy-MM-dd'));
+            const dateStr = format(day, 'yyyy-MM-dd');
+            const isCustomHoli = customHolidays.some(h => format(new Date(h.date), 'yyyy-MM-dd') === dateStr);
+            const isPublicHoli = PUBLIC_HOLIDAYS.some(h => h.date === dateStr);
+            const isHoli = isCustomHoli || isPublicHoli;
+
             const isWE = isWeekend(day);
             const isWorkDay = !isHoli && !isWE;
+            const goalForDay = getWorkGoal(day);
 
             if (isWorkDay) {
                 workDaysCount++;
                 if (isBefore(day, today)) {
                     passedWorkDaysBeforeToday++;
+                    expectedBeforeTodaySeconds += (goalForDay * 3600);
                 }
                 if (isSameDay(day, today)) {
                     isTodayWorkDay = true;
                 }
                 if (!isAfter(day, today)) {
                     passedWorkDays++;
+                    totalExpectedTillNowSeconds += (goalForDay * 3600);
                 }
             }
         });
 
-        const expectedToday = isTodayWorkDay ? (workGoal * 3600) : 0;
+        const expectedToday = isTodayWorkDay ? (getWorkGoal(today) * 3600) : 0;
         const totalWorkedBeforeToday = totalWorked - dailyWorked;
-        const expectedBeforeToday = passedWorkDaysBeforeToday * workGoal * 3600;
 
-        const balanceBeforeToday = totalWorkedBeforeToday - expectedBeforeToday;
+        const balanceBeforeToday = totalWorkedBeforeToday - expectedBeforeTodaySeconds;
         const requiredToday = expectedToday - balanceBeforeToday;
 
         const dailyCompoundedBalance = dailyWorked - requiredToday;
-        const monthlyBalance = totalWorked - (passedWorkDays * workGoal * 3600);
+        const monthlyBalance = totalWorked - totalExpectedTillNowSeconds;
 
         return {
             monthlyBalance,
